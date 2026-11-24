@@ -3,6 +3,7 @@ name: ClaudeTrap - Windows Release Build
 on:
   push:
     branches: [claudetrap]
+    tags: ["v*"]
   pull_request:
     branches: [claudetrap]
   workflow_dispatch:
@@ -12,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -30,14 +31,28 @@ jobs:
         with:
           dotnet-version: 6.0.428
 
+      - name: Determine application version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "2.11.4"
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref_name }}"
+            if ($tag -notmatch '^v(?<version>\\d+\\.\\d+\\.\\d+)$') {
+              throw "Release tags must use the vMAJOR.MINOR.PATCH format (received '$tag')."
+            }
+            $version = $Matches.version
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Restore dependencies
         run: dotnet restore .\Bloxstrap\Bloxstrap.csproj
 
       - name: Build
-        run: dotnet build .\Bloxstrap\Bloxstrap.csproj --no-restore -c Release
+        run: dotnet build .\Bloxstrap\Bloxstrap.csproj --no-restore -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.version }}
 
       - name: Publish single-file app
-        run: dotnet publish .\Bloxstrap\Bloxstrap.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:CommitHash=${{ github.sha }} -p:CommitRef=${{ github.ref_name }} -o .\artifacts\release
+        run: dotnet publish .\Bloxstrap\Bloxstrap.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.version }} -p:CommitHash=${{ github.sha }} -p:CommitRef=${{ github.ref_type }}/${{ github.ref_name }} -o .\artifacts\release
 
       - name: Upload ClaudeTrap release build
         uses: actions/upload-artifact@v7
@@ -46,3 +61,12 @@ jobs:
           path: .\artifacts\release\*
           if-no-files-found: error
           retention-days: 30
+
+      - name: Create draft ClaudeTrap release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ClaudeTrap ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          files: ./artifacts/release/ClaudeTrap.exe
