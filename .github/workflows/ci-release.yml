@@ -49,6 +49,10 @@ jobs:
           }
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
+      - name: Verify WPF ICO resources
+        shell: pwsh
+        run: .\scripts\verify-wpf-ico.ps1
+
       - name: Restore dependencies
         run: dotnet restore .\Bloxstrap\Bloxstrap.csproj
 
