@@ -820,10 +820,12 @@ namespace Bloxstrap
                 return false;
             }
 
+            string releaseTag = releaseInfo.TagName.Trim();
+
             VersionComparison versionComparison;
             try
             {
-                versionComparison = Utilities.CompareVersions(App.Version, releaseInfo.TagName);
+                versionComparison = Utilities.CompareVersions(App.Version, releaseTag);
             }
             catch (Exception ex)
             {
@@ -847,14 +849,14 @@ namespace Bloxstrap
 
             if (asset is null)
             {
-                App.Logger.WriteLine(LOG_IDENT, $"Release {releaseInfo.TagName} does not contain a Windows executable asset.");
+                App.Logger.WriteLine(LOG_IDENT, $"Release {releaseTag} does not contain a Windows executable asset.");
                 return false;
             }
 
             if (Dialog is not null)
                 Dialog.CancelEnabled = false;
 
-            string version = releaseInfo.TagName;
+            string version = releaseTag;
 #else
             string version = App.Version;
 #endif
@@ -870,7 +872,11 @@ namespace Bloxstrap
 
                 File.Copy(Paths.Process, downloadLocation, true);
 #else
-                string downloadLocation = Path.Combine(Paths.TempUpdates, asset.Name);
+                // Include the release version in the cache key so an older executable
+                // with the same asset name cannot be reused for a newer release.
+                string cacheVersion = Regex.Replace(version, "[^a-zA-Z0-9._-]", "_");
+                string cacheFileName = $"{Path.GetFileNameWithoutExtension(asset.Name)}-{cacheVersion}{Path.GetExtension(asset.Name)}";
+                string downloadLocation = Path.Combine(Paths.TempUpdates, cacheFileName);
 
                 Directory.CreateDirectory(Paths.TempUpdates);
 
@@ -883,7 +889,7 @@ namespace Bloxstrap
 
                 if (!File.Exists(downloadLocation))
                 {
-                    App.Logger.WriteLine(LOG_IDENT, $"Downloading {releaseInfo.TagName} ({asset.Name})...");
+                    App.Logger.WriteLine(LOG_IDENT, $"Downloading {releaseTag} ({asset.Name})...");
                     await DownloadUpdateAssetAsync(asset.BrowserDownloadUrl, downloadLocation);
                 }
 #endif
