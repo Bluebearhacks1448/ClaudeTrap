@@ -44,4 +44,4 @@ git submodule update --init --recursive
 
 ClaudeTrap is derived from [Bloxstrap](https://github.com/bloxstraplabs/bloxstrap), originally created by pizzaboxer and maintained by its contributors. The original MIT license and copyright notice are retained in [LICENSE](LICENSE). ClaudeTrap changes are maintained separately in this repository.
 
-ClaudeTrap is an independent community project and is not affiliated with or endorsed by Roblox Corporation or Bloxstrap Labs.
+ClaudeTrap is an independent community project and is not affiliated with or endorsed by Roblox Corporation or Bloxstrap Labs. UI translations retain upstream contributor credit while displaying the ClaudeTrap product name.
