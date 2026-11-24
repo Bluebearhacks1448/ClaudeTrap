@@ -11,6 +11,7 @@ namespace Bloxstrap.UI.Elements.Base
     public abstract class WpfUiWindow : UiWindow
     {
         private readonly IThemeService _themeService = new ThemeService();
+        private bool _sourceInitialized;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct WindowThemeOptions
@@ -53,6 +54,72 @@ namespace Bloxstrap.UI.Elements.Base
 #endif
         }
 
+        protected override void OnBackdropTypeChanged(BackgroundType oldValue, BackgroundType newValue)
+        {
+            // XAML sets the initial backdrop before the HWND exists. Defer that change:
+            // UiWindow applies the selected value from OnSourceInitialized after our probe.
+            if (!_sourceInitialized)
+                return;
+
+            if (newValue != BackgroundType.None
+                && newValue != BackgroundType.Unknown
+                && Background.IsSupported(newValue)
+                && !CanApplyWindowBackdrop())
+            {
+                WindowBackdropType = BackgroundType.None;
+                return;
+            }
+
+            base.OnBackdropTypeChanged(oldValue, newValue);
+        }
+
+        private bool CanApplyWindowBackdrop()
+        {
+            IntPtr windowHandle = new WindowInteropHelper(this).Handle;
+            if (windowHandle == IntPtr.Zero)
+            {
+                App.Logger.WriteLine(
+                    "WpfUiWindow::CanApplyWindowBackdrop",
+                    "Window handle is not available; using the standard window background."
+                );
+                return false;
+            }
+
+            var options = new WindowThemeOptions
+            {
+                Flags = 0x00000001, // WTNCA_NODRAWCAPTION
+                Mask = 0x0000000F  // WTNCA_VALIDBITS
+            };
+
+            try
+            {
+                int hresult = TrySetWindowThemeAttribute(
+                    windowHandle,
+                    1, // WTA_NONCLIENT
+                    ref options,
+                    (uint)Marshal.SizeOf<WindowThemeOptions>()
+                );
+
+                if (hresult >= 0)
+                    return true;
+
+                App.Logger.WriteLine(
+                    "WpfUiWindow::CanApplyWindowBackdrop",
+                    $"SetWindowThemeAttribute is unavailable (HRESULT 0x{hresult:X8}); using the standard window background."
+                );
+            }
+            catch (Exception ex)
+            {
+                App.Logger.WriteLine(
+                    "WpfUiWindow::CanApplyWindowBackdrop",
+                    "Could not probe SetWindowThemeAttribute; using the standard window background."
+                );
+                App.Logger.WriteException("WpfUiWindow::CanApplyWindowBackdrop", ex);
+            }
+
+            return false;
+        }
+
         protected override void OnSourceInitialized(EventArgs e)
         {
             if (App.Settings.Prop.WPFSoftwareRender || App.LaunchSettings.NoGPUFlag.Active)
@@ -66,44 +133,15 @@ namespace Bloxstrap.UI.Elements.Base
             // window instead of letting an optional visual effect crash application startup.
             if (WindowBackdropType != BackgroundType.None
                 && WindowBackdropType != BackgroundType.Unknown
-                && Background.IsSupported(WindowBackdropType))
+                && Background.IsSupported(WindowBackdropType)
+                && !CanApplyWindowBackdrop())
             {
-                IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-                var options = new WindowThemeOptions
-                {
-                    Flags = 0x00000001, // WTNCA_NODRAWCAPTION
-                    Mask = 0x0000000F  // WTNCA_VALIDBITS
-                };
-
-                try
-                {
-                    int hresult = TrySetWindowThemeAttribute(
-                        windowHandle,
-                        1, // WTA_NONCLIENT
-                        ref options,
-                        (uint)Marshal.SizeOf<WindowThemeOptions>()
-                    );
-
-                    if (hresult < 0)
-                    {
-                        App.Logger.WriteLine(
-                            "WpfUiWindow::OnSourceInitialized",
-                            $"SetWindowThemeAttribute is unavailable (HRESULT 0x{hresult:X8}); using the standard window background."
-                        );
-                        WindowBackdropType = BackgroundType.None;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    App.Logger.WriteLine(
-                        "WpfUiWindow::OnSourceInitialized",
-                        "Could not probe SetWindowThemeAttribute; using the standard window background."
-                    );
-                    App.Logger.WriteException("WpfUiWindow::OnSourceInitialized", ex);
-                    WindowBackdropType = BackgroundType.None;
-                }
+                // The initial DP callback was deferred above, so no failing Loaded handler
+                // has been registered yet.
+                WindowBackdropType = BackgroundType.None;
             }
 
+            _sourceInitialized = true;
             base.OnSourceInitialized(e);
         }
     }
