@@ -7,6 +7,10 @@ on:
     branches: [claudetrap]
   workflow_dispatch:
 
+concurrency:
+  group: claudetrap-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
