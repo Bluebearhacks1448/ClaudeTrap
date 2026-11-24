@@ -762,15 +762,74 @@ namespace Bloxstrap
 #endregion
 
         #region App Install
+        private static bool IsValidWindowsExecutable(string path)
+        {
+            try
+            {
+                using var stream = File.OpenRead(path);
+                return stream.Length >= 2 && stream.ReadByte() == 0x4D && stream.ReadByte() == 0x5A;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private static async Task DownloadUpdateAssetAsync(string downloadUrl, string destinationPath)
+        {
+            if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+                throw new InvalidDataException("The update asset URL must be an absolute HTTPS URL.");
+
+            string temporaryPath = destinationPath + ".download";
+
+            try
+            {
+                if (File.Exists(temporaryPath))
+                    File.Delete(temporaryPath);
+
+                using var response = await App.HttpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                await using var responseStream = await response.Content.ReadAsStreamAsync();
+                await using var fileStream = new FileStream(
+                    temporaryPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None
+                );
+
+                await responseStream.CopyToAsync(fileStream);
+                await fileStream.FlushAsync();
+
+                if (!IsValidWindowsExecutable(temporaryPath))
+                    throw new InvalidDataException("The downloaded update is not a valid Windows executable.");
+
+                File.Move(temporaryPath, destinationPath, true);
+            }
+            catch
+            {
+                try
+                {
+                    if (File.Exists(temporaryPath))
+                        File.Delete(temporaryPath);
+                }
+                catch (Exception ex)
+                {
+                    App.Logger.WriteException("Bootstrapper::DownloadUpdateAssetAsync", ex);
+                }
+
+                throw;
+            }
+        }
+
         private async Task<bool> CheckForUpdates()
         {
             const string LOG_IDENT = "Bootstrapper::CheckForUpdates";
-            
-            // don't update if there's another instance running (likely running in the background)
-            // i don't like this, but there isn't much better way of doing it /shrug
+
+            // Don't update if another instance is running (likely a background update).
             if (Process.GetProcessesByName(App.ProjectName).Length > 1)
             {
-                App.Logger.WriteLine(LOG_IDENT, $"More than one Bloxstrap instance running, aborting update check");
+                App.Logger.WriteLine(LOG_IDENT, $"More than one {App.ProjectName} instance is running; aborting update check.");
                 return false;
             }
 
@@ -779,15 +838,40 @@ namespace Bloxstrap
 #if !DEBUG_UPDATER
             var releaseInfo = await App.GetLatestRelease();
 
-            if (releaseInfo is null)
-                return false;
-
-            var versionComparison = Utilities.CompareVersions(App.Version, releaseInfo.TagName);
-
-            // check if we aren't using a deployed build, so we can update to one if a new version comes out
-            if (App.IsProductionBuild && versionComparison == VersionComparison.Equal || versionComparison == VersionComparison.GreaterThan)
+            if (releaseInfo is null || String.IsNullOrWhiteSpace(releaseInfo.TagName))
             {
-                App.Logger.WriteLine(LOG_IDENT, "No updates found");
+                App.Logger.WriteLine(LOG_IDENT, "No published release is available.");
+                return false;
+            }
+
+            VersionComparison versionComparison;
+            try
+            {
+                versionComparison = Utilities.CompareVersions(App.Version, releaseInfo.TagName);
+            }
+            catch (Exception ex)
+            {
+                App.Logger.WriteLine(LOG_IDENT, $"Ignoring invalid release tag '{releaseInfo.TagName}'.");
+                App.Logger.WriteException(LOG_IDENT, ex);
+                return false;
+            }
+
+            // A production build at the latest version needs no update. Never downgrade a newer build.
+            if ((App.IsProductionBuild && versionComparison == VersionComparison.Equal)
+                || versionComparison == VersionComparison.GreaterThan)
+            {
+                App.Logger.WriteLine(LOG_IDENT, "No updates found.");
+                return false;
+            }
+
+            var asset = releaseInfo.Assets?.FirstOrDefault(x =>
+                !String.IsNullOrWhiteSpace(x.Name)
+                && String.Equals(Path.GetFileName(x.Name), x.Name, StringComparison.Ordinal)
+                && x.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+
+            if (asset is null)
+            {
+                App.Logger.WriteLine(LOG_IDENT, $"Release {releaseInfo.TagName} does not contain a Windows executable asset.");
                 return false;
             }
 
@@ -804,26 +888,27 @@ namespace Bloxstrap
             try
             {
 #if DEBUG_UPDATER
-                string downloadLocation = Path.Combine(Paths.TempUpdates, "Bloxstrap.exe");
+                string downloadLocation = Path.Combine(Paths.TempUpdates, "ClaudeTrap.exe");
 
                 Directory.CreateDirectory(Paths.TempUpdates);
 
                 File.Copy(Paths.Process, downloadLocation, true);
 #else
-                var asset = releaseInfo.Assets![0];
-
                 string downloadLocation = Path.Combine(Paths.TempUpdates, asset.Name);
 
                 Directory.CreateDirectory(Paths.TempUpdates);
 
-                App.Logger.WriteLine(LOG_IDENT, $"Downloading {releaseInfo.TagName}...");
-                
+                // A previous interrupted download must not be mistaken for a completed update.
+                if (File.Exists(downloadLocation) && !IsValidWindowsExecutable(downloadLocation))
+                {
+                    App.Logger.WriteLine(LOG_IDENT, "Removing an incomplete or invalid cached update.");
+                    File.Delete(downloadLocation);
+                }
+
                 if (!File.Exists(downloadLocation))
                 {
-                    var response = await App.HttpClient.GetAsync(asset.BrowserDownloadUrl);
-
-                    await using var fileStream = new FileStream(downloadLocation, FileMode.OpenOrCreate, FileAccess.Write);
-                    await response.Content.CopyToAsync(fileStream);
+                    App.Logger.WriteLine(LOG_IDENT, $"Downloading {releaseInfo.TagName} ({asset.Name})...");
+                    await DownloadUpdateAssetAsync(asset.BrowserDownloadUrl, downloadLocation);
                 }
 #endif
 
@@ -847,14 +932,14 @@ namespace Bloxstrap
                 App.Settings.Save();
 
                 new InterProcessLock("AutoUpdater");
-                
+
                 Process.Start(startInfo);
 
                 return true;
             }
             catch (Exception ex)
             {
-                App.Logger.WriteLine(LOG_IDENT, "An exception occurred when running the auto-updater");
+                App.Logger.WriteLine(LOG_IDENT, "An exception occurred when running the auto-updater.");
                 App.Logger.WriteException(LOG_IDENT, ex);
 
                 Frontend.ShowMessageBox(
