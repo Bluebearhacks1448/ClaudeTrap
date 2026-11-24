@@ -16,23 +16,54 @@
         public event EventHandler? CanContinueEvent;
 
         // called by codebehind on page load
-        public async void DoChecks()
+        public void DoChecks()
         {
-            var releaseInfo = await App.GetLatestRelease();
+            // Checking GitHub must not block the installer when the API is slow or unavailable.
+            CanContinue = true;
+            OnPropertyChanged(nameof(CanContinue));
+            CanContinueEvent?.Invoke(this, EventArgs.Empty);
 
-            if (releaseInfo is not null)
+            _ = CheckForUpdateAsync();
+        }
+
+        private async Task CheckForUpdateAsync()
+        {
+            const string LOG_IDENT = "WelcomeViewModel::CheckForUpdateAsync";
+
+            try
             {
-                if (Utilities.CompareVersions(App.Version, releaseInfo.TagName) == VersionComparison.LessThan)
+                var releaseInfo = await App.GetLatestRelease();
+
+                if (releaseInfo is null || String.IsNullOrWhiteSpace(releaseInfo.TagName))
+                    return;
+
+                string releaseTag = releaseInfo.TagName.Trim();
+                string releaseVersion = releaseTag.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+                    ? releaseTag[1..]
+                    : releaseTag;
+
+                if (!Version.TryParse(releaseVersion, out _))
                 {
-                    VersionNotice = String.Format(Strings.Installer_Welcome_UpdateNotice, App.Version, releaseInfo.TagName.Replace("v", ""));
+                    App.Logger.WriteLine(LOG_IDENT, $"Ignoring invalid release tag '{releaseTag}'.");
+                    return;
+                }
+
+                if (Utilities.CompareVersions(App.Version, releaseTag) == VersionComparison.LessThan)
+                {
+                    VersionNotice = String.Format(
+                        Strings.Installer_Welcome_UpdateNotice,
+                        App.Version,
+                        releaseVersion
+                    );
                     OnPropertyChanged(nameof(VersionNotice));
                 }
             }
-
-            CanContinue = true;
-            OnPropertyChanged(nameof(CanContinue));
-
-            CanContinueEvent?.Invoke(this, new EventArgs());
+            catch (Exception ex)
+            {
+                // An update notice is optional; a failed check must never break installation.
+                App.Logger.WriteLine(LOG_IDENT, "Failed to check for a newer ClaudeTrap release.");
+                App.Logger.WriteException(LOG_IDENT, ex);
+            }
         }
     }
 }
