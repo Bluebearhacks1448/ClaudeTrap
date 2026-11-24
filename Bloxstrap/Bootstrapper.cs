@@ -798,6 +798,53 @@ namespace Bloxstrap
             }
         }
 
+        private static async Task DownloadUpdateAssetAsync(string downloadUrl, string destinationPath)
+        {
+            if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+                throw new InvalidDataException("The update asset URL must be an absolute HTTPS URL.");
+
+            string temporaryPath = destinationPath + ".download";
+
+            try
+            {
+                if (File.Exists(temporaryPath))
+                    File.Delete(temporaryPath);
+
+                using var response = await App.HttpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                await using var responseStream = await response.Content.ReadAsStreamAsync();
+                await using var fileStream = new FileStream(
+                    temporaryPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None
+                );
+
+                await responseStream.CopyToAsync(fileStream);
+                await fileStream.FlushAsync();
+
+                if (!IsValidWindowsExecutable(temporaryPath))
+                    throw new InvalidDataException("The downloaded update is not a valid Windows executable.");
+
+                File.Move(temporaryPath, destinationPath, true);
+            }
+            catch
+            {
+                try
+                {
+                    if (File.Exists(temporaryPath))
+                        File.Delete(temporaryPath);
+                }
+                catch (Exception ex)
+                {
+                    App.Logger.WriteException("Bootstrapper::DownloadUpdateAssetAsync", ex);
+                }
+
+                throw;
+            }
+        }
+
         private async Task<bool> CheckForUpdates()
         {
             const string LOG_IDENT = "Bootstrapper::CheckForUpdates";
