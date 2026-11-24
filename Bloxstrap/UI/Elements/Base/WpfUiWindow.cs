@@ -63,7 +63,7 @@ namespace Bloxstrap.UI.Elements.Base
 
             if (newValue != BackgroundType.None
                 && newValue != BackgroundType.Unknown
-                && Background.IsSupported(newValue)
+                && Wpf.Ui.Appearance.Background.IsSupported(newValue)
                 && !CanApplyWindowBackdrop())
             {
                 WindowBackdropType = BackgroundType.None;
@@ -133,7 +133,7 @@ namespace Bloxstrap.UI.Elements.Base
             // window instead of letting an optional visual effect crash application startup.
             if (WindowBackdropType != BackgroundType.None
                 && WindowBackdropType != BackgroundType.Unknown
-                && Background.IsSupported(WindowBackdropType)
+                && Wpf.Ui.Appearance.Background.IsSupported(WindowBackdropType)
                 && !CanApplyWindowBackdrop())
             {
                 // The initial DP callback was deferred above, so no failing Loaded handler
