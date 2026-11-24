@@ -767,58 +767,34 @@ namespace Bloxstrap
             try
             {
                 using var stream = File.OpenRead(path);
-                return stream.Length >= 2 && stream.ReadByte() == 0x4D && stream.ReadByte() == 0x5A;
+
+                if (stream.Length < 64)
+                    return false;
+
+                byte[] dosHeader = new byte[64];
+                if (stream.Read(dosHeader, 0, dosHeader.Length) != dosHeader.Length
+                    || dosHeader[0] != 0x4D
+                    || dosHeader[1] != 0x5A)
+                {
+                    return false;
+                }
+
+                int peHeaderOffset = BitConverter.ToInt32(dosHeader, 0x3C);
+                if (peHeaderOffset < dosHeader.Length || peHeaderOffset > stream.Length - 4)
+                    return false;
+
+                stream.Position = peHeaderOffset;
+
+                byte[] peSignature = new byte[4];
+                return stream.Read(peSignature, 0, peSignature.Length) == peSignature.Length
+                    && peSignature[0] == 0x50
+                    && peSignature[1] == 0x45
+                    && peSignature[2] == 0x00
+                    && peSignature[3] == 0x00;
             }
             catch (Exception)
             {
                 return false;
-            }
-        }
-
-        private static async Task DownloadUpdateAssetAsync(string downloadUrl, string destinationPath)
-        {
-            if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
-                throw new InvalidDataException("The update asset URL must be an absolute HTTPS URL.");
-
-            string temporaryPath = destinationPath + ".download";
-
-            try
-            {
-                if (File.Exists(temporaryPath))
-                    File.Delete(temporaryPath);
-
-                using var response = await App.HttpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode();
-
-                await using var responseStream = await response.Content.ReadAsStreamAsync();
-                await using var fileStream = new FileStream(
-                    temporaryPath,
-                    FileMode.CreateNew,
-                    FileAccess.Write,
-                    FileShare.None
-                );
-
-                await responseStream.CopyToAsync(fileStream);
-                await fileStream.FlushAsync();
-
-                if (!IsValidWindowsExecutable(temporaryPath))
-                    throw new InvalidDataException("The downloaded update is not a valid Windows executable.");
-
-                File.Move(temporaryPath, destinationPath, true);
-            }
-            catch
-            {
-                try
-                {
-                    if (File.Exists(temporaryPath))
-                        File.Delete(temporaryPath);
-                }
-                catch (Exception ex)
-                {
-                    App.Logger.WriteException("Bootstrapper::DownloadUpdateAssetAsync", ex);
-                }
-
-                throw;
             }
         }
 
@@ -941,6 +917,9 @@ namespace Bloxstrap
             {
                 App.Logger.WriteLine(LOG_IDENT, "An exception occurred when running the auto-updater.");
                 App.Logger.WriteException(LOG_IDENT, ex);
+
+                if (Dialog is not null)
+                    Dialog.CancelEnabled = true;
 
                 Frontend.ShowMessageBox(
                     string.Format(Strings.Bootstrapper_AutoUpdateFailed, version),
