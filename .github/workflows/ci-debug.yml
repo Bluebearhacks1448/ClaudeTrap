@@ -1,4 +1,4 @@
-name: ClaudeTrap - Windows Debug Build
+name: ClaudeTrap - Windows Debug Build (Actions enabled)
 
 on:
   push:
