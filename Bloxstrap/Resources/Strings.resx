@@ -838,7 +838,7 @@ Selecting 'No' will ignore this warning and continue installation.</value>
   <data name="Installer.Welcome.MainText" xml:space="preserve">
     <value>Thank you for downloading ClaudeTrap. 
 
-The only official websites to download ClaudeTrap from are {0} and {1}, so please verify that you got it from an official source.
+ClaudeTrap is an independent community fork based on Bloxstrap. The source code is available in {0}, and official ClaudeTrap releases will be published in {1}. Verify that these links point to Bluebearhacks1448/ClaudeTrap before downloading.
 
 This installation process will be quick and simple, and you will be able to configure any of ClaudeTrap's settings after installation.</value>
     <comment>{0} and {1} are URLs</comment>
@@ -1104,7 +1104,7 @@ While enabled, it will automatically launch Roblox after closing Settings, and r
 Would you like to enable test mode?</value>
   </data>
   <data name="About.Translators.Description" xml:space="preserve">
-    <value>All of ClaudeTrap's translations are crowdsourced through [Crowdin]({0}). Everyone listed here are people who generously volunteered their time and effort to help localise ClaudeTrap. A massive thank you to everyone here!</value>
+    <value>These translations were originally contributed to the upstream Bloxstrap project through [Crowdin]({0}). ClaudeTrap inherits that localization work and thanks the original volunteer contributors.</value>
   </data>
   <data name="Common.Navigation.Install" xml:space="preserve">
     <value>Install</value>
