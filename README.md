@@ -20,7 +20,7 @@ Every push to `claudetrap` runs Windows Debug and Release builds. Download test 
 - Local content mods and custom bootstrapper themes
 - Discord Rich Presence and server information
 
-ClaudeTrap is intended for Windows PCs. It is not an exploit and does not modify Roblox game code. No launcher can guarantee how Roblox will treat every configuration or third-party modification.
+ClaudeTrap is intended for Windows PCs. It is not an exploit and does not modify Roblox game code. No launcher can guarantee how Roblox will treat every configuration or third-party modification. The current build keeps diagnostic logs locally and does not upload usage analytics or crash logs.
 
 ## Build from source
 
