@@ -10,6 +10,8 @@ ClaudeTrap is an independent Windows Roblox bootstrapper fork based on [Bloxstra
 
 ClaudeTrap is an early-stage fork. The current codebase is inherited from Bloxstrap; project-specific work is being developed on the `claudetrap` branch. Until a ClaudeTrap release is published, use GitHub Actions artifacts for test builds rather than assuming there is a stable installer.
 
+Every push to `claudetrap` runs Windows Debug and Release builds. Download test builds from the repository's Actions artifacts.
+
 ## Inherited functionality
 
 - Roblox installation, update and launch handling
