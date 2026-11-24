@@ -1,30 +1,44 @@
-name: CI (Debug)
-on: [push, pull_request]
+name: ClaudeTrap - Windows Debug Build
+
+on:
+  push:
+    branches: [claudetrap]
+  pull_request:
+    branches: [claudetrap]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build on Windows (Debug)
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v6
-      with:
-        submodules: true
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
-    - uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: '6.0.x'
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 6.0.428
 
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore .\Bloxstrap\Bloxstrap.csproj
 
-    - name: Build
-      run: dotnet build --no-restore
+      - name: Build
+        run: dotnet build .\Bloxstrap\Bloxstrap.csproj --no-restore -c Debug
 
-    - name: Publish
-      run: dotnet publish -p:PublishSingleFile=true -p:CommitHash=${{ github.sha }} -p:CommitRef=${{ github.ref_type }}/${{ github.ref_name }} -r win-x64 -c Debug --self-contained false .\Bloxstrap\Bloxstrap.csproj
+      - name: Publish single-file app
+        run: dotnet publish .\Bloxstrap\Bloxstrap.csproj -c Debug -r win-x64 --self-contained false -p:PublishSingleFile=true -p:CommitHash=${{ github.sha }} -p:CommitRef=${{ github.ref_name }} -o .\artifacts\debug
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: Bloxstrap (Debug) (${{ github.sha }})
-        path: .\Bloxstrap\bin\Debug\net6.0-windows\win-x64\publish\*
+      - name: Upload ClaudeTrap debug build
+        uses: actions/upload-artifact@v7
+        with:
+          name: ClaudeTrap-Windows-Debug-${{ github.sha }}
+          path: .\artifacts\debug\*
+          if-no-files-found: error
+          retention-days: 14
