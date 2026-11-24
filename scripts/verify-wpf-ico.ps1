@@ -82,3 +82,59 @@ function Test-RgbaIcon([string]$Path) {
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Test-RgbaIcon (Join-Path $projectRoot "Bloxstrap\ClaudeTrap.ico")
 Test-RgbaIcon (Join-Path $projectRoot "Bloxstrap\Resources\IconBloxstrap.ico")
+
+# Exercise the same WIC decoder that WPF uses at runtime. Structural PNG checks
+# alone do not guarantee that Windows can decode every frame in an ICO.
+Add-Type -AssemblyName PresentationCore
+
+function Test-WpfBitmapDecode([string]$Path) {
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $decoder = [System.Windows.Media.Imaging.BitmapDecoder]::Create(
+            $stream,
+            [System.Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat,
+            [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+        )
+
+        if ($decoder.Frames.Count -lt 1) {
+            throw "WPF returned no image frames for $Path"
+        }
+
+        foreach ($frame in $decoder.Frames) {
+            $stride = [int][Math]::Ceiling(($frame.PixelWidth * $frame.Format.BitsPerPixel) / 8.0)
+            $pixels = [byte[]]::new($stride * $frame.PixelHeight)
+            $frame.CopyPixels($pixels, $stride, 0)
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+
+    Write-Host "WPF/WIC successfully decoded: $Path"
+}
+
+function Test-RgbaPng([string]$Path) {
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    $signature = [byte[]](0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+    if ($bytes.Length -lt 33) {
+        throw "PNG is too small: $Path"
+    }
+
+    for ($i = 0; $i -lt $signature.Length; $i++) {
+        if ($bytes[$i] -ne $signature[$i]) {
+            throw "Invalid PNG signature: $Path"
+        }
+    }
+
+    if ($bytes[24] -ne 8 -or $bytes[25] -ne 6) {
+        throw "Logo PNG must use 8-bit RGBA color: $Path"
+    }
+
+    Write-Host "Verified 8-bit RGBA PNG: $Path"
+}
+
+Test-WpfBitmapDecode (Join-Path $projectRoot "Bloxstrap\ClaudeTrap.ico")
+Test-WpfBitmapDecode (Join-Path $projectRoot "Bloxstrap\Resources\IconBloxstrap.ico")
+$logoPng = Join-Path $projectRoot "Bloxstrap\Resources\ClaudeTrap.png"
+Test-RgbaPng $logoPng
+Test-WpfBitmapDecode $logoPng

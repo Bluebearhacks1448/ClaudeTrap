@@ -31,7 +31,7 @@ jobs:
           dotnet-version: 6.0.428
 
       - name: Verify WPF ICO resources
-        shell: pwsh
+        shell: powershell
         run: .\scripts\verify-wpf-ico.ps1
 
       - name: Restore dependencies
