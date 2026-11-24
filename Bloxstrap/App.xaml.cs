@@ -320,6 +320,16 @@ namespace Bloxstrap
                 }
 
                 Settings.Load();
+
+                // ClaudeTrap has no telemetry service. Clear the legacy setting so existing
+                // installations also display the disabled state accurately.
+                if (Settings.Prop.EnableAnalytics)
+                {
+                    Settings.Prop.EnableAnalytics = false;
+                    Settings.Save();
+                    Logger.WriteLine(LOG_IDENT, "Disabled the legacy analytics setting.");
+                }
+
                 State.Load();
                 FastFlags.Load();
 
