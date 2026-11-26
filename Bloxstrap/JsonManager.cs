@@ -17,6 +17,8 @@
 
         public bool Loaded { get; protected set; } = false;
 
+        public bool LastSaveSucceeded { get; private set; } = false;
+
         public virtual string ClassName { get; }
 
         public virtual string FileName => $"{ClassName}.json";
@@ -104,31 +106,74 @@
         public virtual void Save()
         {
             string LOG_IDENT = $"{LOG_IDENT_CLASS}::Save";
-            
-            App.Logger.WriteLine(LOG_IDENT, $"Saving to {FileLocation}...");
 
-            Directory.CreateDirectory(Path.GetDirectoryName(FileLocation)!);
+            LastSaveSucceeded = false;
+
+            string? directory = Path.GetDirectoryName(FileLocation);
+            if (String.IsNullOrEmpty(directory))
+                throw new InvalidOperationException($"Invalid JSON file location: {FileLocation}");
+
+            string temporaryLocation = $"{FileLocation}.{Guid.NewGuid():N}.tmp";
 
             try
             {
-                string contents = JsonSerializer.Serialize(Prop, new JsonSerializerOptions { WriteIndented = true });
+                App.Logger.WriteLine(LOG_IDENT, $"Saving to {FileLocation}...");
 
-                File.WriteAllText(FileLocation, contents);
+                Directory.CreateDirectory(directory);
+
+                string contents = JsonSerializer.Serialize(
+                    Prop,
+                    new JsonSerializerOptions { WriteIndented = true }
+                );
+
+                // Write to a unique file on the same volume, flush it, and only then
+                // replace the current JSON. A crash or disk-full error cannot truncate
+                // the previously valid settings/state file.
+                using (var fileStream = new FileStream(
+                    temporaryLocation,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None
+                ))
+                using (var writer = new StreamWriter(fileStream, new UTF8Encoding(false)))
+                {
+                    writer.Write(contents);
+                    writer.Flush();
+                    fileStream.Flush(true);
+                }
+
+                File.Move(temporaryLocation, FileLocation, true);
 
                 LastFileHash = MD5Hash.FromString(contents);
+                LastSaveSucceeded = true;
+
+                App.Logger.WriteLine(LOG_IDENT, "Save complete!");
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 App.Logger.WriteLine(LOG_IDENT, "Failed to save");
                 App.Logger.WriteException(LOG_IDENT, ex);
 
-                string errorMessage = string.Format(Resources.Strings.Bootstrapper_JsonManagerSaveFailed, ClassName, ex.Message);
+                string errorMessage = string.Format(
+                    Resources.Strings.Bootstrapper_JsonManagerSaveFailed,
+                    ClassName,
+                    ex.Message
+                );
                 Frontend.ShowMessageBox(errorMessage, System.Windows.MessageBoxImage.Warning);
-
-                return;
             }
-
-            App.Logger.WriteLine(LOG_IDENT, "Save complete!");
+            finally
+            {
+                try
+                {
+                    if (File.Exists(temporaryLocation))
+                        File.Delete(temporaryLocation);
+                }
+                catch (Exception cleanupException)
+                {
+                    App.Logger.WriteLine(LOG_IDENT, "Failed to remove a temporary JSON file.");
+                    App.Logger.WriteException(LOG_IDENT, cleanupException);
+                }
+            }
         }
 
         public virtual void Delete()
