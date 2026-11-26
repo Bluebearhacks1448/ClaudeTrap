@@ -91,7 +91,7 @@ namespace Bloxstrap.UI.ViewModels.Settings
             {
                 App.Logger.WriteLine(LOG_IDENT, "Failed to start the Claude desktop pet.");
                 App.Logger.WriteException(LOG_IDENT, ex);
-                Frontend.ShowMessageBox("Claude could not be started. See the local log for details.", MessageBoxImage.Warning);
+                Frontend.ShowMessageBox(Strings.DesktopPet_LaunchFailed, MessageBoxImage.Warning);
             }
         }
 
