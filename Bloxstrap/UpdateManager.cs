@@ -42,6 +42,15 @@ namespace Bloxstrap
             if (release is null || String.IsNullOrWhiteSpace(release.TagName) || release.Assets is null)
                 throw new InvalidDataException("GitHub returned an incomplete latest-release response.");
 
+            try
+            {
+                _ = Utilities.GetVersionFromString(release.TagName);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidDataException("GitHub returned an invalid release version tag.", ex);
+            }
+
             return new UpdateCheckResult(release, false);
         }
 
@@ -96,10 +105,13 @@ namespace Bloxstrap
             string executablePath = Path.Combine(updateDirectory, "ClaudeTrap.exe");
             string checksumPath = Path.Combine(updateDirectory, "ClaudeTrap.exe.sha256");
 
-            GithubReleaseAsset executableAsset = release.Assets!.First(
+            List<GithubReleaseAsset> assets = release.Assets
+                ?? throw new InvalidDataException("The GitHub release does not contain an asset list.");
+
+            GithubReleaseAsset executableAsset = assets.First(
                 x => String.Equals(x.Name, "ClaudeTrap.exe", StringComparison.OrdinalIgnoreCase)
             );
-            GithubReleaseAsset checksumAsset = release.Assets.First(
+            GithubReleaseAsset checksumAsset = assets.First(
                 x => String.Equals(x.Name, "ClaudeTrap.exe.sha256", StringComparison.OrdinalIgnoreCase)
             );
 
