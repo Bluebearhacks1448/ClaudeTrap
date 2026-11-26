@@ -112,38 +112,87 @@ namespace Bloxstrap
                 App.SendStat("installAction", "install");
         }
 
+        private static bool IsSameOrChildPath(string candidatePath, string parentPath)
+        {
+            string candidate = Path.TrimEndingDirectorySeparator(Path.GetFullPath(candidatePath));
+            string parent = Path.TrimEndingDirectorySeparator(Path.GetFullPath(parentPath));
+
+            if (String.Equals(candidate, parent, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            string parentPrefix = Path.EndsInDirectorySeparator(parent)
+                ? parent
+                : parent + Path.DirectorySeparatorChar;
+
+            return candidate.StartsWith(parentPrefix, StringComparison.OrdinalIgnoreCase);
+        }
+
         private bool ValidateLocation()
         {
-            // prevent from installing to the root of a drive
-            if (InstallLocation.Length <= 3)
+            // The text box accepts manually entered paths, so require an absolute local path.
+            if (String.IsNullOrWhiteSpace(InstallLocation) || !Path.IsPathFullyQualified(InstallLocation))
                 return false;
 
-            // unc path, just to be safe
-            if (InstallLocation.StartsWith("\\\\"))
+            string fullPath;
+            try
+            {
+                fullPath = Path.GetFullPath(InstallLocation);
+            }
+            catch (Exception ex)
+            {
+                App.Logger.WriteException("Installer::ValidateLocation", ex);
+                return false;
+            }
+
+            // Do not install to a drive root or a UNC/device path.
+            string? root = Path.GetPathRoot(fullPath);
+            if (String.IsNullOrEmpty(root)
+                || String.Equals(
+                    Path.TrimEndingDirectorySeparator(fullPath),
+                    Path.TrimEndingDirectorySeparator(root),
+                    StringComparison.OrdinalIgnoreCase)
+                || fullPath.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // Keep launcher files out of temporary folders and the Windows/Program Files trees.
+            string[] protectedRoots =
+            {
+                Path.GetTempPath(),
+                Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            };
+
+            foreach (string protectedRoot in protectedRoots)
+            {
+                if (!String.IsNullOrWhiteSpace(protectedRoot) && IsSameOrChildPath(fullPath, protectedRoot))
+                    return false;
+            }
+
+            // Do not put the installation inside a OneDrive-managed location.
+            bool isOneDrivePath = fullPath
+                .Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries)
+                .Any(segment => segment.StartsWith("OneDrive", StringComparison.OrdinalIgnoreCase));
+
+            if (isOneDrivePath)
                 return false;
 
-            if (InstallLocation.StartsWith(Path.GetTempPath(), StringComparison.InvariantCultureIgnoreCase)
-                || InstallLocation.Contains("\\Temp\\", StringComparison.InvariantCultureIgnoreCase))
+            // Avoid installing directly into profile folders such as Desktop or Downloads.
+            if (String.Equals(Directory.GetParent(fullPath)?.FullName, Paths.UserProfile, StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            // prevent from installing to a onedrive folder
-            if (InstallLocation.Contains("OneDrive", StringComparison.InvariantCultureIgnoreCase))
-                return false;
-
-            // prevent from installing to an essential user profile folder (e.g. Documents, Downloads, Contacts idk)
-            if (String.Compare(Directory.GetParent(InstallLocation)?.FullName, Paths.UserProfile, StringComparison.InvariantCultureIgnoreCase) == 0)
-                return false;
-
-            // prevent from installing into the program files folder
-            if (InstallLocation.Contains("Program Files"))
-                return false;
-
+            // Store a normalized absolute path so registry values and later file operations agree.
+            InstallLocation = Path.TrimEndingDirectorySeparator(fullPath);
             return true;
         }
 
         public bool CheckInstallLocation()
         {
-            if (string.IsNullOrEmpty(InstallLocation))
+            InstallLocationError = "";
+
+            if (string.IsNullOrWhiteSpace(InstallLocation))
             {
                 InstallLocationError = Strings.Menu_InstallLocation_NotSet;
             }
