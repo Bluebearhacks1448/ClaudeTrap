@@ -810,7 +810,7 @@ namespace Bloxstrap
                 if (File.Exists(temporaryPath))
                     File.Delete(temporaryPath);
 
-                using var response = await App.HttpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+                using var response = await App.UpdateHttpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
                 response.EnsureSuccessStatusCode();
 
                 await using var responseStream = await response.Content.ReadAsStreamAsync();
