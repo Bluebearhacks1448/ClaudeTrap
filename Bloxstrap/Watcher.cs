@@ -101,15 +101,44 @@ namespace Bloxstrap
             }
         }
 
+        private bool IsWatchedProcessRunning()
+        {
+            try
+            {
+                using var process = Process.GetProcessById(_watcherData!.ProcessId);
+                return !process.HasExited;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+
         public async Task Run()
         {
             if (!_lock.IsAcquired || _watcherData is null)
                 return;
 
-            ActivityWatcher?.Start();
+            Task? activityWatcherTask = ActivityWatcher?.StartAsync();
 
-            while (Utilities.GetProcessesSafe().Any(x => x.Id == _watcherData.ProcessId))
-                await Task.Delay(1000);
+            try
+            {
+                while (IsWatchedProcessRunning())
+                    await Task.Delay(1000);
+            }
+            finally
+            {
+                // Stop the tailer and await its completion so file handles and exceptions
+                // are not left behind after the Roblox process exits.
+                ActivityWatcher?.Dispose();
+
+                if (activityWatcherTask is not null)
+                    await activityWatcherTask;
+            }
 
             if (_watcherData.AutoclosePids is not null)
             {
@@ -125,10 +154,18 @@ namespace Bloxstrap
         {
             App.Logger.WriteLine("Watcher::Dispose", "Disposing Watcher");
 
-            _notifyIcon?.Dispose();
-            RichPresence?.Dispose();
-
-            GC.SuppressFinalize(this);
+            try
+            {
+                ActivityWatcher?.Dispose();
+                _notifyIcon?.Dispose();
+                RichPresence?.Dispose();
+            }
+            finally
+            {
+                // The named mutex is created on the UI thread and must be released there.
+                _lock.Dispose();
+                GC.SuppressFinalize(this);
+            }
         }
     }
 }
