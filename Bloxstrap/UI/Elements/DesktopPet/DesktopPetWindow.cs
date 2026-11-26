@@ -35,6 +35,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
         private PetMotionState _motion = PetMotionState.Walking;
         private bool _paused;
         private bool _dragging;
+        private bool _use3D;
         private Point _dragOffset;
         private Point _lastPointer;
         private DateTime _lastPointerTime;
@@ -100,7 +101,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             };
             _timer.Tick += (_, _) => UpdatePet();
 
-            SetDisplayMode(App.Settings.Prop.DesktopPetUse3D, false);
+            SetDisplayMode(App.Settings.Prop.DesktopPetUse3D);
         }
 
         private static Canvas Create2DSprite()
@@ -354,18 +355,13 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             };
 
             var mode2D = new MenuItem { Header = "2D cartoon", Name = "Mode2DItem", IsCheckable = true };
-            mode2D.Click += (_, _) => SetDisplayMode(false, true);
+            mode2D.Click += (_, _) => SetDisplayMode(false);
 
             var mode3D = new MenuItem { Header = "3D toy", Name = "Mode3DItem", IsCheckable = true };
-            mode3D.Click += (_, _) => SetDisplayMode(true, true);
+            mode3D.Click += (_, _) => SetDisplayMode(true);
 
-            var closeItem = new MenuItem { Header = "Disable Claude pet" };
-            closeItem.Click += (_, _) =>
-            {
-                App.Settings.Prop.DesktopPetEnabled = false;
-                App.Settings.Save();
-                Close();
-            };
+            var closeItem = new MenuItem { Header = "Close Claude pet" };
+            closeItem.Click += (_, _) => Close();
 
             menu.Items.Add(pauseItem);
             menu.Items.Add(new Separator());
@@ -389,9 +385,9 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                 if (menuItem.Name == "PauseMovementItem")
                     menuItem.Header = _paused ? "Resume movement" : "Pause movement";
                 else if (menuItem.Name == "Mode2DItem")
-                    menuItem.IsChecked = !App.Settings.Prop.DesktopPetUse3D;
+                    menuItem.IsChecked = !_use3D;
                 else if (menuItem.Name == "Mode3DItem")
-                    menuItem.IsChecked = App.Settings.Prop.DesktopPetUse3D;
+                    menuItem.IsChecked = _use3D;
             }
         }
 
@@ -408,33 +404,15 @@ namespace Bloxstrap.UI.Elements.DesktopPet
         private void Pet_Closed(object? sender, EventArgs e)
         {
             _timer.Stop();
-            App.Settings.Prop.DesktopPetLeft = Left;
-            App.Settings.Prop.DesktopPetTop = Top;
-            App.Settings.Save();
         }
 
         private void RestorePosition()
         {
-            double virtualLeft = SystemParameters.VirtualScreenLeft;
-            double virtualTop = SystemParameters.VirtualScreenTop;
-            double virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
-            double virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
+            double virtualRight = SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth;
+            double virtualBottom = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
 
-            double savedLeft = App.Settings.Prop.DesktopPetLeft;
-            double savedTop = App.Settings.Prop.DesktopPetTop;
-
-            if (Double.IsFinite(savedLeft) && Double.IsFinite(savedTop)
-                && savedLeft >= virtualLeft && savedLeft + PetSize <= virtualRight
-                && savedTop >= virtualTop && savedTop + PetSize <= virtualBottom)
-            {
-                Left = savedLeft;
-                Top = savedTop;
-            }
-            else
-            {
-                Left = virtualRight - PetSize - 36;
-                Top = virtualBottom - PetSize - 42;
-            }
+            Left = virtualRight - PetSize - 36;
+            Top = virtualBottom - PetSize - 42;
 
             _currentPlatform = FindCurrentPlatform();
             if (_currentPlatform is not null)
@@ -444,8 +422,6 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             }
             else
             {
-                // A saved position may be mid-air (for example after the user threw
-                // Claude and closed it quickly). Let gravity settle the pet naturally.
                 _motion = PetMotionState.Falling;
                 _velocityY = 0;
             }
@@ -774,14 +750,11 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                 : _motion == PetMotionState.Climbing ? -12 : Math.Clamp(_velocityX / 28, -32, 32);
         }
 
-        private void SetDisplayMode(bool use3D, bool persist)
+        private void SetDisplayMode(bool use3D)
         {
-            App.Settings.Prop.DesktopPetUse3D = use3D;
+            _use3D = use3D;
             _sprite2D.Visibility = use3D ? Visibility.Collapsed : Visibility.Visible;
             _sprite3D.Visibility = use3D ? Visibility.Visible : Visibility.Collapsed;
-
-            if (persist)
-                App.Settings.Save();
         }
 
         private Point GetPointerPositionInDips(Point windowPoint)
