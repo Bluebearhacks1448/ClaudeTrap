@@ -50,8 +50,12 @@ namespace Bloxstrap.UI.ViewModels.Settings
 
         public double DesktopPetSpeed
         {
-            get => App.Settings.Prop.DesktopPetSpeed;
-            set => App.Settings.Prop.DesktopPetSpeed = Math.Clamp(value, 0.5, 2.0);
+            get => Double.IsFinite(App.Settings.Prop.DesktopPetSpeed)
+                ? Math.Clamp(App.Settings.Prop.DesktopPetSpeed, 0.5, 2.0)
+                : 1.0;
+            set => App.Settings.Prop.DesktopPetSpeed = Double.IsFinite(value)
+                ? Math.Clamp(value, 0.5, 2.0)
+                : 1.0;
         }
 
         public ICommand LaunchDesktopPetCommand => new RelayCommand(LaunchDesktopPet);
