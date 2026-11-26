@@ -592,12 +592,13 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
             _nextTrick = now.AddSeconds(_random.Next(4, 9));
 
+            double petCenter = Left + PetSize / 2;
             PetPlatform? target = _platforms
                 .Where(x => x != _currentPlatform
+                    && !x.IsScreen
                     && x.Top < _currentPlatform.Top - 26
-                    && Math.Abs(x.Top - _currentPlatform.Top) < 310
-                    && Math.Abs((x.Left + x.Right) / 2 - (Left + PetSize / 2)) < 360)
-                .OrderBy(x => Math.Abs(x.Top - _currentPlatform.Top) + Math.Abs((x.Left + x.Right) / 2 - (Left + PetSize / 2)) * 0.55)
+                    && DistanceToRange(petCenter, x.Left, x.Right) < 360)
+                .OrderBy(x => Math.Abs(x.Top - _currentPlatform.Top) + DistanceToRange(petCenter, x.Left, x.Right) * 0.8)
                 .FirstOrDefault();
 
             if (target is not null)
@@ -637,10 +638,17 @@ namespace Bloxstrap.UI.Elements.DesktopPet
         private void StartClimb(PetPlatform target)
         {
             _targetPlatform = target;
-            _climbSideX = Left < target.Left
-                ? target.Left - PetSize * 0.72
-                : target.Right - PetSize * 0.28;
-            _velocityY = -115;
+
+            // Pick the closest side of the target window, climb up its frame,
+            // then step onto the upper edge.
+            double leftSide = target.Left - PetSize * 0.78;
+            double rightSide = target.Right - PetSize * 0.22;
+            _climbSideX = Math.Abs(Left - leftSide) <= Math.Abs(Left - rightSide)
+                ? leftSide
+                : rightSide;
+
+            _direction = _climbSideX < Left ? -1 : 1;
+            _velocityY = -145;
             _motion = PetMotionState.Climbing;
         }
 
@@ -763,6 +771,15 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                 App.Settings.Save();
         }
 
+        private Point GetPointerPositionInDips(Point windowPoint)
+        {
+            // PointToScreen returns device coordinates. Window.Left/Top and the
+            // drag offset are WPF DIPs, so convert before moving the layered window.
+            Point screenPoint = PointToScreen(windowPoint);
+            DpiScale dpi = VisualTreeHelper.GetDpi(this);
+            return new Point(screenPoint.X / dpi.DpiScaleX, screenPoint.Y / dpi.DpiScaleY);
+        }
+
         private void Pet_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton != MouseButton.Left)
@@ -773,7 +790,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             _velocityX = 0;
             _velocityY = 0;
             _dragOffset = e.GetPosition(this);
-            _lastPointer = PointToScreen(e.GetPosition(this));
+            _lastPointer = GetPointerPositionInDips(e.GetPosition(this));
             _lastPointerTime = DateTime.UtcNow;
             CaptureMouse();
             e.Handled = true;
@@ -784,7 +801,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             if (!_dragging || e.LeftButton != MouseButtonState.Pressed)
                 return;
 
-            Point pointer = PointToScreen(e.GetPosition(this));
+            Point pointer = GetPointerPositionInDips(e.GetPosition(this));
             DateTime now = DateTime.UtcNow;
             double elapsed = Math.Max(0.001, (now - _lastPointerTime).TotalSeconds);
 
