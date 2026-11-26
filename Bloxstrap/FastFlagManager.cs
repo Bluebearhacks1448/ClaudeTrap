@@ -58,19 +58,22 @@ namespace Bloxstrap
             }
             else
             {
-                if (Prop.ContainsKey(key))
+                string newValue = value.ToString()!;
+
+                if (Prop.TryGetValue(key, out object? currentValue))
                 {
-                    if (key == Prop[key].ToString())
+                    string? currentText = currentValue?.ToString();
+                    if (String.Equals(currentText, newValue, StringComparison.Ordinal))
                         return;
 
-                    App.Logger.WriteLine(LOG_IDENT, $"Changing of '{key}' from '{Prop[key]}' to '{value}' is pending");
+                    App.Logger.WriteLine(LOG_IDENT, $"Changing of '{key}' from '{currentText}' to '{newValue}' is pending");
                 }
                 else
                 {
-                    App.Logger.WriteLine(LOG_IDENT, $"Setting of '{key}' to '{value}' is pending");
+                    App.Logger.WriteLine(LOG_IDENT, $"Setting of '{key}' to '{newValue}' is pending");
                 }
 
-                Prop[key] = value.ToString()!;
+                Prop[key] = newValue;
             }
         }
 
@@ -131,8 +134,8 @@ namespace Bloxstrap
         {
             // convert all flag values to strings before saving
 
-            foreach (var pair in Prop)
-                Prop[pair.Key] = pair.Value.ToString()!;
+            foreach (string key in Prop.Keys.ToArray())
+                Prop[key] = Prop[key]?.ToString() ?? String.Empty;
 
             base.Save();
 
