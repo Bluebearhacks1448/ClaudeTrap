@@ -30,6 +30,60 @@ namespace Bloxstrap.UI.ViewModels.Settings
 
         public Visibility WebEnvironmentVisibility => App.Settings.Prop.DeveloperMode ? Visibility.Visible : Visibility.Collapsed;
 
+        public bool DesktopPetEnabled
+        {
+            get => App.Settings.Prop.DesktopPetEnabled;
+            set => App.Settings.Prop.DesktopPetEnabled = value;
+        }
+
+        public int DesktopPetModeIndex
+        {
+            get => App.Settings.Prop.DesktopPetUse3D ? 1 : 0;
+            set => App.Settings.Prop.DesktopPetUse3D = value == 1;
+        }
+
+        public bool DesktopPetJumpOnWindows
+        {
+            get => App.Settings.Prop.DesktopPetJumpOnWindows;
+            set => App.Settings.Prop.DesktopPetJumpOnWindows = value;
+        }
+
+        public double DesktopPetSpeed
+        {
+            get => App.Settings.Prop.DesktopPetSpeed;
+            set => App.Settings.Prop.DesktopPetSpeed = Math.Clamp(value, 0.5, 2.0);
+        }
+
+        public ICommand LaunchDesktopPetCommand => new RelayCommand(LaunchDesktopPet);
+
+        private void LaunchDesktopPet()
+        {
+            const string LOG_IDENT = "BloxstrapViewModel::LaunchDesktopPet";
+
+            if (!App.Settings.Prop.DesktopPetEnabled)
+                return;
+
+            try
+            {
+                // Persist the selected model and movement preferences before the
+                // companion starts in its own, independent process.
+                App.Settings.Save();
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = Paths.Process,
+                    Arguments = "-desktoppet",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                App.Logger.WriteLine(LOG_IDENT, "Failed to start the Claude desktop pet.");
+                App.Logger.WriteException(LOG_IDENT, ex);
+                Frontend.ShowMessageBox("Claude could not be started. See the local log for details.", MessageBoxImage.Warning);
+            }
+        }
+
         public bool ShouldExportConfig { get; set; } = true;
 
         public bool ShouldExportLogs { get; set; } = true;
