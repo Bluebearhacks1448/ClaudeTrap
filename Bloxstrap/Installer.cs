@@ -452,6 +452,71 @@ namespace Bloxstrap
             App.SendStat("installAction", "uninstall");
         }
 
+        private static void StopDesktopPetForUpgrade()
+        {
+            const string LOG_IDENT = "Installer::StopDesktopPetForUpgrade";
+            string eventName = $"{App.ProjectName}-DesktopPetCloseEvent";
+
+            try
+            {
+                using var closeSignal = new EventWaitHandle(false, EventResetMode.AutoReset, eventName);
+                closeSignal.Set();
+            }
+            catch (Exception ex)
+            {
+                App.Logger.WriteLine(LOG_IDENT, "Could not signal the desktop pet to close.");
+                App.Logger.WriteException(LOG_IDENT, ex);
+            }
+
+            // Older pet builds may not understand the named close signal. Ask the
+            // known companion window to close gracefully as a compatibility fallback.
+            for (int attempt = 0; attempt < 50; attempt++)
+            {
+                using (var petLock = new InterProcessLock("DesktopPet"))
+                {
+                    if (petLock.IsAcquired)
+                        return;
+                }
+
+                if (attempt == 0)
+                {
+                    foreach (Process process in Process.GetProcessesByName(App.ProjectName))
+                    {
+                        try
+                        {
+                            if (process.Id == Environment.ProcessId)
+                                continue;
+
+                            string? processPath = process.MainModule?.FileName;
+                            if (String.Equals(process.MainWindowTitle, "Claude desktop pet", StringComparison.Ordinal)
+                                && !String.IsNullOrWhiteSpace(processPath)
+                                && String.Equals(
+                                    Path.GetFullPath(processPath),
+                                    Path.GetFullPath(Paths.Application),
+                                    StringComparison.OrdinalIgnoreCase
+                                ))
+                            {
+                                process.CloseMainWindow();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            App.Logger.WriteLine(LOG_IDENT, $"Could not close companion process {process.Id} gracefully.");
+                            App.Logger.WriteException(LOG_IDENT, ex);
+                        }
+                        finally
+                        {
+                            process.Dispose();
+                        }
+                    }
+                }
+
+                Thread.Sleep(100);
+            }
+
+            App.Logger.WriteLine(LOG_IDENT, "Desktop pet did not release its process lock within five seconds; continuing with normal file-replacement retries.");
+        }
+
         public static void HandleUpgrade()
         {
             const string LOG_IDENT = "Installer::HandleUpgrade";
@@ -508,6 +573,8 @@ namespace Bloxstrap
                 App.Logger.WriteLine(LOG_IDENT, "Failed to update! (Could not obtain singleton mutex)");
                 return;
             }
+
+            StopDesktopPetForUpgrade();
 
             // prior to 2.8.0, auto-updating was handled with this... bruteforce method
             // now it's handled with the system mutex you see above, but we need to keep this logic for <2.8.0 versions
