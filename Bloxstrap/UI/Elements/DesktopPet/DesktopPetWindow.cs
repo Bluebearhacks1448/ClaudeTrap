@@ -340,9 +340,9 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             };
         }
 
-        private ContextMenu CreatePetContextMenu()
+        private System.Windows.Controls.ContextMenu CreatePetContextMenu()
         {
-            var menu = new ContextMenu();
+            var menu = new System.Windows.Controls.ContextMenu();
             var pauseItem = new MenuItem { Header = Strings.DesktopPet_Pause, Name = "PauseMovementItem" };
             pauseItem.Click += (_, _) =>
             {
