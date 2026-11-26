@@ -87,7 +87,7 @@ jobs:
 
       - name: Upload ClaudeTrap release build
         uses: actions/upload-artifact@v7
-        with
+        with:
           name: ClaudeTrap-Windows-Release-${{ github.sha }}
           path: .\artifacts\release\*
           if-no-files-found: error
