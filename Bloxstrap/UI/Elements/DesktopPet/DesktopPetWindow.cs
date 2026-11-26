@@ -412,7 +412,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             double virtualBottom = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
 
             Left = virtualRight - PetSize - 36;
-            Top = virtualBottom - PetSize - 42;
+            Top = virtualBottom - PetSize * 0.91 - 6;
 
             _currentPlatform = FindCurrentPlatform();
             if (_currentPlatform is not null)
@@ -438,7 +438,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             {
                 new PetPlatform(
                     virtualLeft - PetSize,
-                    virtualTop + SystemParameters.VirtualScreenHeight - PetSize + 6,
+                    virtualBottom - PetSize * 0.91,
                     virtualRight,
                     true,
                     IntPtr.Zero
