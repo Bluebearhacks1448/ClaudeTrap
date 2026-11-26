@@ -118,30 +118,57 @@
 
         public void WriteException(string identifier, Exception ex)
         {
-            Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+            CultureInfo originalCulture = Thread.CurrentThread.CurrentUICulture;
 
-            string hresult = "0x" + ex.HResult.ToString("X8");
+            try
+            {
+                Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 
-            WriteLine($"[{identifier}] ({hresult}) {ex}");
-
-            Thread.CurrentThread.CurrentUICulture = Locale.CurrentCulture;
+                string hresult = "0x" + ex.HResult.ToString("X8");
+                WriteLine($"[{identifier}] ({hresult}) {ex}");
+            }
+            finally
+            {
+                Thread.CurrentThread.CurrentUICulture = originalCulture;
+            }
         }
 
-        private async void WriteToLog(string message)
+        private void WriteToLog(string message)
+        {
+            // Do not use async void here: an I/O failure must not become an unhandled
+            // exception on a thread-pool continuation.
+            _ = WriteToLogAsync(message);
+        }
+
+        private async Task WriteToLogAsync(string message)
         {
             if (!Initialized)
                 return;
 
+            bool lockAcquired = false;
+
             try
             {
-                await _semaphore.WaitAsync();
-                await _filestream!.WriteAsync(Encoding.UTF8.GetBytes($"{message}\r\n"));
+                await _semaphore.WaitAsync().ConfigureAwait(false);
+                lockAcquired = true;
 
-                _ = _filestream.FlushAsync();
+                FileStream? stream = _filestream;
+                if (stream is null)
+                    return;
+
+                byte[] bytes = Encoding.UTF8.GetBytes($"{message}\r\n");
+                await stream.WriteAsync(bytes, 0, bytes.Length).ConfigureAwait(false);
+                await stream.FlushAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // Logging is best-effort and must never crash the launcher.
+                Debug.WriteLine($"Logger::WriteToLogAsync failed: {ex}");
             }
             finally
             {
-                _semaphore.Release();
+                if (lockAcquired)
+                    _semaphore.Release();
             }
         }
     }
