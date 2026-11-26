@@ -26,6 +26,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
         private readonly RotateTransform _spriteTilt;
         private readonly AxisAngleRotation3D _modelRotation;
         private readonly DispatcherTimer _timer;
+        private readonly EventWaitHandle _updateCloseSignal;
         private readonly Random _random = new();
 
         private List<PetPlatform> _platforms = new();
@@ -55,6 +56,12 @@ namespace Bloxstrap.UI.Elements.DesktopPet
         public DesktopPetWindow()
         {
             Title = "Claude desktop pet";
+            _updateCloseSignal = new EventWaitHandle(
+                false,
+                EventResetMode.AutoReset,
+                $"{App.ProjectName}-DesktopPetCloseEvent"
+            );
+
             Width = PetSize;
             Height = PetSize;
             MinWidth = PetSize;
@@ -427,6 +434,8 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             _dragging = false;
             if (IsMouseCaptured)
                 ReleaseMouseCapture();
+
+            _updateCloseSignal.Dispose();
         }
 
         private void RestorePosition()
@@ -564,6 +573,12 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
         private void UpdatePet()
         {
+            if (_updateCloseSignal.WaitOne(0))
+            {
+                Close();
+                return;
+            }
+
             DateTime now = DateTime.UtcNow;
             double delta = Math.Clamp((now - _lastTick).TotalSeconds, 0.001, 0.05);
             _lastTick = now;
