@@ -117,6 +117,63 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="DesktopPet.Title" xml:space="preserve">
+    <value>Claude desktop pet</value>
+  </data>
+  <data name="DesktopPet.Description" xml:space="preserve">
+    <value>A tiny orange Claude companion that wanders around your desktop. Drag it with the left mouse button, throw it, or right-click it for controls.</value>
+  </data>
+  <data name="DesktopPet.Enable.Title" xml:space="preserve">
+    <value>Enable desktop pet</value>
+  </data>
+  <data name="DesktopPet.Enable.Description" xml:space="preserve">
+    <value>Turn on the companion so you can launch it from here. It runs in a separate process and does not need the settings window to stay open.</value>
+  </data>
+  <data name="DesktopPet.Style.Title" xml:space="preserve">
+    <value>Character style</value>
+  </data>
+  <data name="DesktopPet.Style.Description" xml:space="preserve">
+    <value>Choose a flat animated 2D mascot or a small 3D toy.</value>
+  </data>
+  <data name="DesktopPet.Style.TwoD" xml:space="preserve">
+    <value>2D cartoon</value>
+  </data>
+  <data name="DesktopPet.Style.ThreeD" xml:space="preserve">
+    <value>3D toy</value>
+  </data>
+  <data name="DesktopPet.Speed.Title" xml:space="preserve">
+    <value>Movement speed</value>
+  </data>
+  <data name="DesktopPet.Speed.Description" xml:space="preserve">
+    <value>Adjust how quickly Claude runs across the screen.</value>
+  </data>
+  <data name="DesktopPet.Jump.Title" xml:space="preserve">
+    <value>Jump and climb on windows</value>
+  </data>
+  <data name="DesktopPet.Jump.Description" xml:space="preserve">
+    <value>Let Claude jump between visible application windows and climb up their sides.</value>
+  </data>
+  <data name="DesktopPet.Launch" xml:space="preserve">
+    <value>Launch Claude</value>
+  </data>
+  <data name="DesktopPet.LaunchFailed" xml:space="preserve">
+    <value>Claude could not be started. See the local log for details.</value>
+  </data>
+  <data name="DesktopPet.Pause" xml:space="preserve">
+    <value>Pause movement</value>
+  </data>
+  <data name="DesktopPet.Resume" xml:space="preserve">
+    <value>Resume movement</value>
+  </data>
+  <data name="DesktopPet.Mode2D" xml:space="preserve">
+    <value>2D cartoon</value>
+  </data>
+  <data name="DesktopPet.Mode3D" xml:space="preserve">
+    <value>3D toy</value>
+  </data>
+  <data name="DesktopPet.Close" xml:space="preserve">
+    <value>Close Claude pet</value>
+  </data>
   <data name="Bootstrapper.AutoUpdateFailed" xml:space="preserve">
     <value>ClaudeTrap was unable to automatically update to version {0}. Please update it manually by downloading and running it from the website.</value>
   </data>
