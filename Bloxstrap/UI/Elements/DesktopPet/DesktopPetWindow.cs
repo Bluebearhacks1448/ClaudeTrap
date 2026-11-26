@@ -353,10 +353,10 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                     _motion = FindCurrentPlatform() is null ? PetMotionState.Falling : PetMotionState.Walking;
             };
 
-            var mode2D = new MenuItem { Header = "2D cartoon", Name = "Mode2DItem" };
+            var mode2D = new MenuItem { Header = "2D cartoon", Name = "Mode2DItem", IsCheckable = true };
             mode2D.Click += (_, _) => SetDisplayMode(false, true);
 
-            var mode3D = new MenuItem { Header = "3D toy", Name = "Mode3DItem" };
+            var mode3D = new MenuItem { Header = "3D toy", Name = "Mode3DItem", IsCheckable = true };
             mode3D.Click += (_, _) => SetDisplayMode(true, true);
 
             var closeItem = new MenuItem { Header = "Disable Claude pet" };
@@ -486,7 +486,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                 double width = (rect.Right - rect.Left) / scaleX;
                 double height = (rect.Bottom - rect.Top) / scaleY;
 
-                if (width < 190 || height < 105 || rect.Top < 20)
+                if (width < 190 || height < 105)
                     return true;
 
                 double left = rect.Left / scaleX;
@@ -826,8 +826,6 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
             e.Handled = true;
         }
-
-        private static readonly EnumWindowsProc EnumWindowsCallback = null!;
 
         private delegate bool EnumWindowsProc(IntPtr handle, IntPtr lParam);
 
