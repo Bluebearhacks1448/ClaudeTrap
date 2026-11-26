@@ -47,7 +47,9 @@ namespace Bloxstrap.UI.Elements.DesktopPet
         private double _climbSideX;
         private DateTime _lastTick = DateTime.UtcNow;
 
-        private double WalkSpeed => 76 * Math.Clamp(App.Settings.Prop.DesktopPetSpeed, 0.5, 2.0);
+        private double WalkSpeed => 76 * (Double.IsFinite(App.Settings.Prop.DesktopPetSpeed)
+            ? Math.Clamp(App.Settings.Prop.DesktopPetSpeed, 0.5, 2.0)
+            : 1.0);
 
         public DesktopPetWindow()
         {
@@ -91,6 +93,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             PreviewMouseLeftButtonDown += Pet_MouseLeftButtonDown;
             PreviewMouseMove += Pet_MouseMove;
             PreviewMouseLeftButtonUp += Pet_MouseLeftButtonUp;
+            LostMouseCapture += Pet_LostMouseCapture;
 
             Loaded += Pet_Loaded;
             Closed += Pet_Closed;
@@ -218,10 +221,10 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                 IsHitTestVisible = true,
                 Camera = new PerspectiveCamera
                 {
-                    Position = new Point3D(0, 0.05, 3.25),
-                    LookDirection = new Vector3D(0, -0.02, -3.25),
+                    Position = new Point3D(0, 0.05, 3.0),
+                    LookDirection = new Vector3D(0, -0.02, -3.0),
                     UpDirection = new Vector3D(0, 1, 0),
-                    FieldOfView = 42
+                    FieldOfView = 40
                 }
             };
 
@@ -308,7 +311,9 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                         center.Y + ny * radiusY,
                         center.Z + nz * radiusZ
                     ));
-                    normals.Add(new Vector3D(nx, ny, nz));
+                    var normal = new Vector3D(nx / radiusX, ny / radiusY, nz / radiusZ);
+                    normal.Normalize();
+                    normals.Add(normal);
                 }
             }
 
@@ -383,7 +388,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                     continue;
 
                 if (menuItem.Name == "PauseMovementItem")
-                    menuItem.Header = _paused ? "Resume movement" : "Pause movement";
+                    menuItem.Header = _paused ? Strings.DesktopPet_Resume : Strings.DesktopPet_Pause;
                 else if (menuItem.Name == "Mode2DItem")
                     menuItem.IsChecked = !_use3D;
                 else if (menuItem.Name == "Mode3DItem")
@@ -404,6 +409,9 @@ namespace Bloxstrap.UI.Elements.DesktopPet
         private void Pet_Closed(object? sender, EventArgs e)
         {
             _timer.Stop();
+            _dragging = false;
+            if (IsMouseCaptured)
+                ReleaseMouseCapture();
         }
 
         private void RestorePosition()
@@ -411,8 +419,8 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             double virtualRight = SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth;
             double virtualBottom = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
 
-            Left = virtualRight - PetSize - 36;
-            Top = virtualBottom - PetSize * 0.91 - 6;
+            Left = Math.Clamp(virtualRight - PetSize - 36, virtualLeft, virtualRight - PetSize);
+            Top = virtualBottom - PetSize * 0.91;
 
             _currentPlatform = FindCurrentPlatform();
             if (_currentPlatform is not null)
@@ -437,9 +445,9 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             var platforms = new List<PetPlatform>
             {
                 new PetPlatform(
-                    virtualLeft - PetSize,
+                    virtualLeft,
                     virtualBottom - PetSize * 0.91,
-                    virtualRight,
+                    virtualRight - PetSize,
                     true,
                     IntPtr.Zero
                 )
@@ -492,13 +500,33 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             }, IntPtr.Zero);
 
             _platforms = platforms;
+            _currentPlatform = RebindPlatform(_currentPlatform, platforms);
+            _targetPlatform = RebindPlatform(_targetPlatform, platforms);
 
-            if (_currentPlatform is not null)
+            // Never attach the pet to an unrelated nearby window after a refresh.
+            // If the platform it was using disappeared, only keep walking when the
+            // pet is physically over another valid platform; otherwise let it fall.
+            if (_motion == PetMotionState.Walking && _currentPlatform is null)
             {
-                _currentPlatform = _platforms
-                    .OrderBy(x => Math.Abs(x.Top - Top) + DistanceToRange(Left, x.Left, x.Right))
-                    .FirstOrDefault();
+                _currentPlatform = FindCurrentPlatform();
+                if (_currentPlatform is null)
+                    _motion = PetMotionState.Falling;
             }
+            else if (_motion == PetMotionState.Climbing && _targetPlatform is null)
+            {
+                _motion = PetMotionState.Falling;
+                _velocityY = 0;
+            }
+        }
+
+        private static PetPlatform? RebindPlatform(PetPlatform? previous, List<PetPlatform> platforms)
+        {
+            if (previous is null)
+                return null;
+
+            return previous.IsScreen
+                ? platforms.FirstOrDefault(x => x.IsScreen)
+                : platforms.FirstOrDefault(x => !x.IsScreen && x.Handle == previous.Handle);
         }
 
         private static double DistanceToRange(double value, double minimum, double maximum)
@@ -718,9 +746,10 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                 }
             }
 
-            if (Top > virtualBottom - PetSize)
+            double screenFloorTop = virtualBottom - PetSize * 0.91;
+            if (Top > screenFloorTop)
             {
-                Top = virtualBottom - PetSize;
+                Top = screenFloorTop;
                 _currentPlatform = _platforms.FirstOrDefault(x => x.IsScreen);
                 _velocityY = 0;
                 _velocityX = 0;
@@ -730,12 +759,13 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
         private void AnimatePet(DateTime now)
         {
+            bool paused = _motion == PetMotionState.Paused;
             double phase = now.TimeOfDay.TotalSeconds * (_motion == PetMotionState.Walking ? 13 : 5);
-            double bob = Math.Sin(phase) * (_motion == PetMotionState.Walking ? 2.8 : 1.2);
+            double bob = paused ? 0 : Math.Sin(phase) * (_motion == PetMotionState.Walking ? 2.8 : 1.2);
 
             _spriteScale.ScaleX = _direction;
-            _spriteScale.ScaleY = 1 + Math.Abs(Math.Sin(phase)) * 0.035;
-            _spriteTilt.Angle = _motion switch
+            _spriteScale.ScaleY = paused ? 1 : 1 + Math.Abs(Math.Sin(phase)) * 0.035;
+            _spriteTilt.Angle = paused ? 0 : _motion switch
             {
                 PetMotionState.Climbing => -_direction * 9,
                 PetMotionState.Jumping => _direction * -8,
@@ -745,9 +775,11 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             };
 
             _sprite2D.Margin = new Thickness(0, bob, 0, 0);
-            _modelRotation.Angle = _motion == PetMotionState.Walking
-                ? Math.Sin(phase) * 9
-                : _motion == PetMotionState.Climbing ? -12 : Math.Clamp(_velocityX / 28, -32, 32);
+            _modelRotation.Angle = paused
+                ? 0
+                : _motion == PetMotionState.Walking
+                    ? Math.Sin(phase) * 9
+                    : _motion == PetMotionState.Climbing ? -12 : Math.Clamp(_velocityX / 28, -32, 32);
         }
 
         private void SetDisplayMode(bool use3D)
@@ -778,7 +810,12 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             _dragOffset = e.GetPosition(this);
             _lastPointer = GetPointerPositionInDips(e.GetPosition(this));
             _lastPointerTime = DateTime.UtcNow;
-            CaptureMouse();
+            if (!CaptureMouse())
+            {
+                _dragging = false;
+                _currentPlatform = FindCurrentPlatform();
+                _motion = _currentPlatform is null ? PetMotionState.Falling : PetMotionState.Walking;
+            }
             e.Handled = true;
         }
 
@@ -828,6 +865,19 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             }
 
             e.Handled = true;
+        }
+
+        private void Pet_LostMouseCapture(object sender, MouseEventArgs e)
+        {
+            if (!_dragging)
+                return;
+
+            // Alt-tabbing or another window taking capture must not leave the pet frozen.
+            _dragging = false;
+            _velocityX = 0;
+            _velocityY = 0;
+            _currentPlatform = FindCurrentPlatform();
+            _motion = _currentPlatform is null ? PetMotionState.Falling : PetMotionState.Walking;
         }
 
         private delegate bool EnumWindowsProc(IntPtr handle, IntPtr lParam);

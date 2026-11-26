@@ -314,6 +314,13 @@ namespace Bloxstrap
         {
             const string LOG_IDENT = "LaunchHandler::LaunchDesktopPet";
 
+            if (!App.Settings.Prop.DesktopPetEnabled)
+            {
+                App.Logger.WriteLine(LOG_IDENT, "Desktop pet launch was blocked because the feature is disabled in Settings");
+                App.Terminate();
+                return;
+            }
+
             using var interlock = new InterProcessLock("DesktopPet");
             if (!interlock.IsAcquired)
             {

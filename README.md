@@ -26,7 +26,7 @@ ClaudeTrap is intended for Windows PCs. It is not an exploit and does not modify
 
 Open **ClaudeTrap → ClaudeTrap** in Settings, enable the desktop pet, choose **2D cartoon** or **3D toy**, adjust its speed, then select **Launch Claude**.
 
-The pet runs in its own process, so it remains on the desktop after the settings window closes. **Left-click and drag** Claude to pick it up; release while moving to throw it. It wanders along the desktop, jumps to nearby application-window edges and climbs taller windows. **Right-click** Claude to pause/resume, or switch its 2D/3D look for the current session. Use the desktop-pet toggle in Settings to disable the feature; the context menu can close the current pet window. The pet starts near the lower-right edge each time.
+The pet runs in its own process, so it remains on the desktop after the settings window closes. **Left-click and drag** Claude to pick it up; release while moving to throw it. It wanders along the desktop, jumps to nearby application-window edges and climbs taller windows. **Right-click** Claude to pause/resume, or switch its 2D/3D look for the current session. Turning the desktop-pet toggle off prevents new launches; close an already-running pet from its right-click menu. The pet starts near the lower-right edge each time.
 
 ## Build from source
 
