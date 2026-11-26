@@ -960,9 +960,18 @@ namespace Bloxstrap
 
                 App.Settings.Save();
 
-                new InterProcessLock("AutoUpdater");
+                // Hold the startup lock until the replacement process has been created.
+                // HandleUpgrade in the new process waits for this lock before replacing files.
+                using (var autoUpdaterLock = new InterProcessLock("AutoUpdater"))
+                {
+                    if (!autoUpdaterLock.IsAcquired)
+                    {
+                        App.Logger.WriteLine(LOG_IDENT, "Another update is already being started; skipping this updater launch.");
+                        return false;
+                    }
 
-                Process.Start(startInfo);
+                    Process.Start(startInfo);
+                }
 
                 return true;
             }
