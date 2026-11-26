@@ -139,8 +139,9 @@ namespace Bloxstrap
 
             base.Save();
 
-            // clone the dictionary
-            OriginalProp = new(Prop);
+            // Do not clear the pending-change indicator if disk persistence failed.
+            if (LastSaveSucceeded)
+                OriginalProp = new(Prop);
         }
 
         public override bool Load(bool alertFailure = true)
