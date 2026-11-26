@@ -314,7 +314,9 @@ namespace Bloxstrap
                 });
             }
 
-            bool deleteFolder = Directory.GetFiles(Paths.Base).Length <= 3;
+            // Preserve settings, FastFlags, themes, modifications and logs when KeepData is selected.
+            // A low count of top-level files is not permission to recursively remove user data.
+            bool deleteFolder = !keepData && Directory.GetFiles(Paths.Base).Length <= 3;
 
             if (deleteFolder)
                 cleanupSequence.Add(() => Directory.Delete(Paths.Base, true));
@@ -408,13 +410,13 @@ namespace Bloxstrap
 
             Filesystem.AssertReadOnly(Paths.Application);
 
-            using (var ipl = new InterProcessLock("AutoUpdater", TimeSpan.FromSeconds(5)))
+            // Keep the mutex until the executable has been replaced and migrations have
+            // completed. Releasing it before File.Copy allowed two updater instances to race.
+            using var ipl = new InterProcessLock("AutoUpdater", TimeSpan.FromSeconds(5));
+            if (!ipl.IsAcquired)
             {
-                if (!ipl.IsAcquired)
-                {
-                    App.Logger.WriteLine(LOG_IDENT, "Failed to update! (Could not obtain singleton mutex)");
-                    return;
-                }
+                App.Logger.WriteLine(LOG_IDENT, "Failed to update! (Could not obtain singleton mutex)");
+                return;
             }
 
             // prior to 2.8.0, auto-updating was handled with this... bruteforce method
