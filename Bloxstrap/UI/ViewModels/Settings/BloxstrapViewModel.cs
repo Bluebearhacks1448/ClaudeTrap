@@ -33,7 +33,14 @@ namespace Bloxstrap.UI.ViewModels.Settings
         public bool DesktopPetEnabled
         {
             get => App.Settings.Prop.DesktopPetEnabled;
-            set => App.Settings.Prop.DesktopPetEnabled = value;
+            set
+            {
+                if (App.Settings.Prop.DesktopPetEnabled == value)
+                    return;
+
+                App.Settings.Prop.DesktopPetEnabled = value;
+                OnPropertyChanged(nameof(DesktopPetEnabled));
+            }
         }
 
         public int DesktopPetModeIndex
