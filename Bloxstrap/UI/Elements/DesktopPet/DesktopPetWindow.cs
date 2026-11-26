@@ -343,24 +343,24 @@ namespace Bloxstrap.UI.Elements.DesktopPet
         private ContextMenu CreatePetContextMenu()
         {
             var menu = new ContextMenu();
-            var pauseItem = new MenuItem { Header = "Pause movement", Name = "PauseMovementItem" };
+            var pauseItem = new MenuItem { Header = Strings.DesktopPet_Pause, Name = "PauseMovementItem" };
             pauseItem.Click += (_, _) =>
             {
                 _paused = !_paused;
-                pauseItem.Header = _paused ? "Resume movement" : "Pause movement";
+                pauseItem.Header = _paused ? Strings.DesktopPet_Resume : Strings.DesktopPet_Pause;
                 if (_paused)
                     _motion = PetMotionState.Paused;
                 else
                     _motion = FindCurrentPlatform() is null ? PetMotionState.Falling : PetMotionState.Walking;
             };
 
-            var mode2D = new MenuItem { Header = "2D cartoon", Name = "Mode2DItem", IsCheckable = true };
+            var mode2D = new MenuItem { Header = Strings.DesktopPet_Mode2D, Name = "Mode2DItem", IsCheckable = true };
             mode2D.Click += (_, _) => SetDisplayMode(false);
 
-            var mode3D = new MenuItem { Header = "3D toy", Name = "Mode3DItem", IsCheckable = true };
+            var mode3D = new MenuItem { Header = Strings.DesktopPet_Mode3D, Name = "Mode3DItem", IsCheckable = true };
             mode3D.Click += (_, _) => SetDisplayMode(true);
 
-            var closeItem = new MenuItem { Header = "Close Claude pet" };
+            var closeItem = new MenuItem { Header = Strings.DesktopPet_Close };
             closeItem.Click += (_, _) => Close();
 
             menu.Items.Add(pauseItem);
