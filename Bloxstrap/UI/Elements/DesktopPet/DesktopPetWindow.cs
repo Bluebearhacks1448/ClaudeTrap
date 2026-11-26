@@ -436,9 +436,19 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                 Top = virtualBottom - PetSize - 42;
             }
 
-            _currentPlatform = FindCurrentPlatform() ?? _platforms.FirstOrDefault();
-            if (_currentPlatform is not null && Math.Abs(Top - _currentPlatform.Top) < 38)
+            _currentPlatform = FindCurrentPlatform();
+            if (_currentPlatform is not null)
+            {
                 Top = _currentPlatform.Top;
+                _motion = PetMotionState.Walking;
+            }
+            else
+            {
+                // A saved position may be mid-air (for example after the user threw
+                // Claude and closed it quickly). Let gravity settle the pet naturally.
+                _motion = PetMotionState.Falling;
+                _velocityY = 0;
+            }
         }
 
         private void RefreshPlatforms()
