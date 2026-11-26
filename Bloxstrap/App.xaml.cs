@@ -205,12 +205,14 @@ namespace Bloxstrap
             }
             else
             {
+                // The build machine and Windows account are useful only in the local log.
+                // Never put them in the User-Agent sent to Roblox or third-party services.
                 Logger.WriteLine(LOG_IDENT, $"Compiled {BuildMetadata.Timestamp.ToFriendlyString()} from {BuildMetadata.Machine}");
 
 #if QA_BUILD
                 userAgent += " (QA)";
 #else
-                userAgent += $" (Build {Convert.ToBase64String(Encoding.UTF8.GetBytes(BuildMetadata.Machine))})";
+                userAgent += " (Local Build)";
 #endif
             }
 
