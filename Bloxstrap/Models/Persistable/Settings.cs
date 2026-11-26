@@ -28,8 +28,6 @@ namespace Bloxstrap.Models.Persistable
         public bool DesktopPetUse3D { get; set; } = false;
         public bool DesktopPetJumpOnWindows { get; set; } = true;
         public double DesktopPetSpeed { get; set; } = 1.0;
-        public double DesktopPetLeft { get; set; } = -1;
-        public double DesktopPetTop { get; set; } = -1;
 
         // integration configuration
         public bool EnableActivityTracking { get; set; } = true;
