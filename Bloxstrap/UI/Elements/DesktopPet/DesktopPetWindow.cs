@@ -501,7 +501,10 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
                 double left = rect.Left / scaleX;
                 double right = rect.Right / scaleX;
-                double top = rect.Top / scaleY - PetSize + 10;
+                // Windows touching the top of the monitor still provide a usable
+                // ledge; clamp the mascot to the visible desktop rather than
+                // excluding those maximized/full-screen windows.
+                double top = Math.Max(virtualTop, rect.Top / scaleY - PetSize + 10);
 
                 left = Math.Max(virtualLeft, left - PetSize * 0.35);
                 right = Math.Min(virtualRight - PetSize, right - PetSize * 0.65);
