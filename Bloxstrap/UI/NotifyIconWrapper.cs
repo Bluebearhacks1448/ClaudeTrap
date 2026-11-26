@@ -129,16 +129,27 @@ namespace Bloxstrap.UI
 
             Task.Run(async () =>
             {
-                await Task.Delay(duration * 1000);
-             
-                _notifyIcon.BalloonTipClicked -= clickHandler;
+                try
+                {
+                    await Task.Delay(duration * 1000);
 
-                App.Logger.WriteLine(LOG_IDENT, "Duration over, erasing current click handler");
+                    // The notification icon can be disposed while the balloon is visible.
+                    if (_disposing)
+                        return;
 
-                if (_alertClickHandler == clickHandler)
-                    _alertClickHandler = null;
-                else
-                    App.Logger.WriteLine(LOG_IDENT, "Click handler has been overridden by another alert");
+                    _notifyIcon.BalloonTipClicked -= clickHandler;
+
+                    App.Logger.WriteLine(LOG_IDENT, "Duration over, erasing current click handler");
+
+                    if (_alertClickHandler == clickHandler)
+                        _alertClickHandler = null;
+                    else
+                        App.Logger.WriteLine(LOG_IDENT, "Click handler has been overridden by another alert");
+                }
+                catch (ObjectDisposedException)
+                {
+                    // The owner was closed while the balloon timeout was pending.
+                }
             });
         }
 
