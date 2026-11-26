@@ -192,18 +192,24 @@ namespace Bloxstrap
         {
             InstallLocationError = "";
 
-            if (string.IsNullOrWhiteSpace(InstallLocation))
+            if (String.IsNullOrWhiteSpace(InstallLocation))
             {
                 InstallLocationError = Strings.Menu_InstallLocation_NotSet;
+                return false;
             }
-            else if (!ValidateLocation())
+
+            if (!ValidateLocation())
             {
                 InstallLocationError = Strings.Menu_InstallLocation_CantInstall;
+                return false;
             }
-            else
+
+            string? testFile = null;
+
+            try
             {
-                if (!IsImplicitInstall 
-                    && !InstallLocation.EndsWith(App.ProjectName, StringComparison.InvariantCultureIgnoreCase)
+                if (!IsImplicitInstall
+                    && !InstallLocation.EndsWith(App.ProjectName, StringComparison.OrdinalIgnoreCase)
                     && Directory.Exists(InstallLocation)
                     && Directory.EnumerateFileSystemEntries(InstallLocation).Any())
                 {
@@ -217,27 +223,57 @@ namespace Bloxstrap
                     );
 
                     if (result == MessageBoxResult.Yes)
+                    {
                         InstallLocation = suggestedChange;
+                        if (!ValidateLocation())
+                        {
+                            InstallLocationError = Strings.Menu_InstallLocation_CantInstall;
+                            return false;
+                        }
+                    }
                     else if (result == MessageBoxResult.Cancel || result == MessageBoxResult.None)
+                    {
                         return false;
+                    }
                 }
 
-                try
-                {
-                    // check if we can write to the directory (a bit hacky but eh)
-                    string testFile = Path.Combine(InstallLocation, $"{App.ProjectName}WriteTest.txt");
+                Directory.CreateDirectory(InstallLocation);
 
-                    Directory.CreateDirectory(InstallLocation);
-                    File.WriteAllText(testFile, "");
-                    File.Delete(testFile);
-                }
-                catch (UnauthorizedAccessException)
+                // Never overwrite a user-owned file to test write access. Use a unique,
+                // exclusively-created temporary file and always remove it below.
+                testFile = Path.Combine(
+                    InstallLocation,
+                    $".{App.ProjectName}-write-test-{Guid.NewGuid():N}.tmp"
+                );
+
+                using (new FileStream(testFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
-                    InstallLocationError = Strings.Menu_InstallLocation_NoWritePerms;
                 }
-                catch (Exception ex)
+            }
+            catch (UnauthorizedAccessException)
+            {
+                InstallLocationError = Strings.Menu_InstallLocation_NoWritePerms;
+            }
+            catch (Exception ex)
+            {
+                InstallLocationError = ex.Message;
+            }
+            finally
+            {
+                if (testFile is not null)
                 {
-                    InstallLocationError = ex.Message;
+                    try
+                    {
+                        File.Delete(testFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        App.Logger.WriteLine("Installer::CheckInstallLocation", "Could not remove the temporary write-test file.");
+                        App.Logger.WriteException("Installer::CheckInstallLocation", ex);
+
+                        if (String.IsNullOrEmpty(InstallLocationError))
+                            InstallLocationError = ex.Message;
+                    }
                 }
             }
 
