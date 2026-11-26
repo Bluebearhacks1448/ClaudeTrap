@@ -29,34 +29,34 @@
             <ui:ToggleSwitch IsChecked="{Binding AnalyticsEnabled, Mode=TwoWay}" IsEnabled="False" />
         </controls:OptionControl>
 
-        <TextBlock Margin="0,18,0,6" Text="Claude desktop pet" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Margin="0,18,0,6" Text="{x:Static resources:Strings.DesktopPet_Title}" FontSize="20" FontWeight="SemiBold" />
 
-        <TextBlock Margin="0,0,0,8" Text="A tiny orange Claude companion that wanders around your desktop. Drag it with the left mouse button, throw it, or right-click it for controls." FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+        <TextBlock Margin="0,0,0,8" Text="{x:Static resources:Strings.DesktopPet_Description}" FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
 
         <controls:OptionControl
-            Header="Enable desktop pet"
-            Description="Turn on the companion so you can launch it from here. It runs in a separate process and does not need the settings window to stay open.">
+            Header="{x:Static resources:Strings.DesktopPet_Enable_Title}"
+            Description="{x:Static resources:Strings.DesktopPet_Enable_Description}">
             <ui:ToggleSwitch IsChecked="{Binding DesktopPetEnabled, Mode=TwoWay}" />
         </controls:OptionControl>
 
         <controls:OptionControl
-            Header="Character style"
-            Description="Choose a flat animated 2D mascot or a small 3D toy.">
+            Header="{x:Static resources:Strings.DesktopPet_Style_Title}"
+            Description="{x:Static resources:Strings.DesktopPet_Style_Description}">
             <ComboBox MinWidth="132" SelectedIndex="{Binding DesktopPetModeIndex, Mode=TwoWay}">
-                <ComboBoxItem Content="2D cartoon" />
-                <ComboBoxItem Content="3D toy" />
+                <ComboBoxItem Content="{x:Static resources:Strings.DesktopPet_Style_TwoD}" />
+                <ComboBoxItem Content="{x:Static resources:Strings.DesktopPet_Style_ThreeD}" />
             </ComboBox>
         </controls:OptionControl>
 
         <controls:OptionControl
-            Header="Movement speed"
-            Description="Adjust how quickly Claude runs across the screen.">
+            Header="{x:Static resources:Strings.DesktopPet_Speed_Title}"
+            Description="{x:Static resources:Strings.DesktopPet_Speed_Description}">
             <Slider MinWidth="150" Minimum="0.5" Maximum="2.0" TickFrequency="0.25" IsSnapToTickEnabled="True" Value="{Binding DesktopPetSpeed, Mode=TwoWay}" />
         </controls:OptionControl>
 
         <controls:OptionControl
-            Header="Jump and climb on windows"
-            Description="Let Claude jump between visible application windows and climb up their sides.">
+            Header="{x:Static resources:Strings.DesktopPet_Jump_Title}"
+            Description="{x:Static resources:Strings.DesktopPet_Jump_Description}">
             <ui:ToggleSwitch IsChecked="{Binding DesktopPetJumpOnWindows, Mode=TwoWay}" />
         </controls:OptionControl>
 
@@ -64,7 +64,7 @@
             Margin="0,8,0,0"
             HorizontalAlignment="Right"
             MinWidth="160"
-            Content="Launch Claude"
+            Content="{x:Static resources:Strings.DesktopPet_Launch}"
             Icon="Play24"
             Command="{Binding LaunchDesktopPetCommand}"
             IsEnabled="{Binding DesktopPetEnabled}" />
