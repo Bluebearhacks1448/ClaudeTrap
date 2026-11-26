@@ -810,10 +810,17 @@ namespace Bloxstrap
                 if (File.Exists(temporaryPath))
                     File.Delete(temporaryPath);
 
-                using var response = await App.UpdateHttpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+                // ResponseHeadersRead returns before the file body is consumed, so use
+                // an explicit token for both the HTTP request and the streamed copy.
+                using var downloadTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                using var response = await App.UpdateHttpClient.GetAsync(
+                    uri,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    downloadTimeout.Token
+                );
                 response.EnsureSuccessStatusCode();
 
-                await using var responseStream = await response.Content.ReadAsStreamAsync();
+                await using var responseStream = await response.Content.ReadAsStreamAsync(downloadTimeout.Token);
                 await using var fileStream = new FileStream(
                     temporaryPath,
                     FileMode.CreateNew,
@@ -821,8 +828,9 @@ namespace Bloxstrap
                     FileShare.None
                 );
 
-                await responseStream.CopyToAsync(fileStream);
-                await fileStream.FlushAsync();
+                await responseStream.CopyToAsync(fileStream, 81920, downloadTimeout.Token);
+                await fileStream.FlushAsync(downloadTimeout.Token);
+                fileStream.Flush(true);
 
                 if (!IsValidWindowsExecutable(temporaryPath))
                     throw new InvalidDataException("The downloaded update is not a valid Windows executable.");
