@@ -416,7 +416,8 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
         private void RestorePosition()
         {
-            double virtualRight = SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth;
+            double virtualLeft = SystemParameters.VirtualScreenLeft;
+            double virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
             double virtualBottom = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
 
             Left = Math.Clamp(virtualRight - PetSize - 36, virtualLeft, virtualRight - PetSize);
