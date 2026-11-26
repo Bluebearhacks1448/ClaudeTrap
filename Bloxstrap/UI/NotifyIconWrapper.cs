@@ -1,4 +1,4 @@
-﻿using Bloxstrap.Integrations;
+using Bloxstrap.Integrations;
 using Bloxstrap.UI.Elements.About;
 using Bloxstrap.UI.Elements.ContextMenu;
 
@@ -6,19 +6,15 @@ namespace Bloxstrap.UI
 {
     public class NotifyIconWrapper : IDisposable
     {
-        // lol who needs properly structured mvvm and xaml when you have the absolute catastrophe that this is
-
-        private bool _disposing = false;
+        private volatile bool _disposing;
 
         private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
-        
         private readonly MenuContainer _menuContainer;
-        
         private readonly Watcher _watcher;
 
         private ActivityWatcher? _activityWatcher => _watcher.ActivityWatcher;
 
-        EventHandler? _alertClickHandler;
+        private EventHandler? _alertClickHandler;
 
         public NotifyIconWrapper(Watcher watcher)
         {
@@ -35,17 +31,17 @@ namespace Bloxstrap.UI
 
             _notifyIcon.MouseClick += MouseClickEventHandler;
 
-            if (_activityWatcher is not null && App.Settings.Prop.ShowServerDetails)
-                _activityWatcher.OnGameJoin += OnGameJoin;
-
             _menuContainer = new(_watcher);
             _menuContainer.Show();
+
+            if (_activityWatcher is not null && App.Settings.Prop.ShowServerDetails)
+                _activityWatcher.OnGameJoin += OnGameJoin;
         }
 
         #region Context menu
         public void MouseClickEventHandler(object? sender, System.Windows.Forms.MouseEventArgs e)
         {
-            if (e.Button != System.Windows.Forms.MouseButtons.Right)
+            if (_disposing || e.Button != System.Windows.Forms.MouseButtons.Right)
                 return;
 
             _menuContainer.Activate();
@@ -56,13 +52,18 @@ namespace Bloxstrap.UI
         #region Activity handlers
         public async void OnGameJoin(object? sender, EventArgs e)
         {
-            if (_activityWatcher is null || _disposing)
+            ActivityWatcher? activityWatcher = _activityWatcher;
+            if (activityWatcher is null || _disposing)
                 return;
+
+            // Capture the activity before awaiting network I/O; the log reader may
+            // update Data while a location lookup is in flight.
+            var activity = activityWatcher.Data;
 
             string? serverLocation;
             try
             {
-                serverLocation = await _activityWatcher.Data.QueryServerLocation();
+                serverLocation = await activity.QueryServerLocation();
             }
             catch (Exception ex)
             {
@@ -74,10 +75,10 @@ namespace Bloxstrap.UI
             if (_disposing)
                 return;
 
-            if (string.IsNullOrEmpty(serverLocation))
+            if (String.IsNullOrEmpty(serverLocation))
             {
                 ShowAlert(
-                    string.Format(Strings.Dialog_Connectivity_UnableToConnect, "ipinfo.io"),
+                    String.Format(Strings.Dialog_Connectivity_UnableToConnect, "ipinfo.io"),
                     Strings.ActivityWatcher_LocationQueryFailed,
                     10,
                     null
@@ -86,7 +87,7 @@ namespace Bloxstrap.UI
                 return;
             }
 
-            string title = _activityWatcher.Data.ServerType switch
+            string title = activity.ServerType switch
             {
                 ServerType.Public => Strings.ContextMenu_ServerInformation_Notification_Title_Public,
                 ServerType.Private => Strings.ContextMenu_ServerInformation_Notification_Title_Private,
@@ -103,54 +104,86 @@ namespace Bloxstrap.UI
         }
         #endregion
 
-        // we may need to create our own handler for this, because this sorta sucks
         public void ShowAlert(string caption, string message, int duration, EventHandler? clickHandler)
         {
-            string id = Guid.NewGuid().ToString()[..8];
+            if (_disposing || duration <= 0)
+                return;
 
-            string LOG_IDENT = $"NotifyIconWrapper::ShowAlert.{id}";
+            // NotifyIcon.ShowBalloonTip expects milliseconds. The user-facing callers
+            // specify seconds, so clamp and convert once for both display and cleanup.
+            int durationSeconds = Math.Clamp(duration, 1, 30);
 
-            App.Logger.WriteLine(LOG_IDENT, $"Showing alert for {duration} seconds (clickHandler={clickHandler is not null})");
-            App.Logger.WriteLine(LOG_IDENT, $"{caption}: {message.Replace("\n", "\\n")}");
+            if (!_menuContainer.Dispatcher.CheckAccess())
+            {
+                try
+                {
+                    _menuContainer.Dispatcher.BeginInvoke(new Action(
+                        () => ShowAlert(caption, message, durationSeconds, clickHandler)
+                    ));
+                }
+                catch (InvalidOperationException)
+                {
+                    // The UI dispatcher is already shutting down.
+                }
+
+                return;
+            }
+
+            if (_disposing)
+                return;
+
+            string id = Guid.NewGuid().ToString("N")[..8];
+            string logIdent = $"NotifyIconWrapper::ShowAlert.{id}";
+
+            App.Logger.WriteLine(logIdent, $"Showing alert for {durationSeconds} seconds (clickHandler={clickHandler is not null})");
+            App.Logger.WriteLine(logIdent, $"{caption}: {message.Replace("\n", "\\n")}");
 
             _notifyIcon.BalloonTipTitle = caption;
             _notifyIcon.BalloonTipText = message;
 
             if (_alertClickHandler is not null)
             {
-                App.Logger.WriteLine(LOG_IDENT, "Previous alert still present, erasing click handler");
+                App.Logger.WriteLine(logIdent, "Previous alert still present, erasing click handler");
                 _notifyIcon.BalloonTipClicked -= _alertClickHandler;
             }
 
             _alertClickHandler = clickHandler;
             _notifyIcon.BalloonTipClicked += clickHandler;
 
-            _notifyIcon.ShowBalloonTip(duration);
+            _notifyIcon.ShowBalloonTip(durationSeconds * 1000);
 
-            Task.Run(async () =>
+            _ = ClearAlertClickHandlerAsync(clickHandler, logIdent, durationSeconds);
+        }
+
+        private async Task ClearAlertClickHandlerAsync(EventHandler? clickHandler, string logIdent, int durationSeconds)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(durationSeconds)).ConfigureAwait(false);
+
+            try
             {
-                try
+                _menuContainer.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    await Task.Delay(duration * 1000);
-
-                    // The notification icon can be disposed while the balloon is visible.
                     if (_disposing)
                         return;
 
                     _notifyIcon.BalloonTipClicked -= clickHandler;
 
-                    App.Logger.WriteLine(LOG_IDENT, "Duration over, erasing current click handler");
+                    App.Logger.WriteLine(logIdent, "Duration over, erasing current click handler");
 
                     if (_alertClickHandler == clickHandler)
                         _alertClickHandler = null;
                     else
-                        App.Logger.WriteLine(LOG_IDENT, "Click handler has been overridden by another alert");
-                }
-                catch (ObjectDisposedException)
-                {
-                    // The owner was closed while the balloon timeout was pending.
-                }
-            });
+                        App.Logger.WriteLine(logIdent, "Click handler has been overridden by another alert");
+                }));
+            }
+            catch (InvalidOperationException)
+            {
+                // The UI dispatcher was shut down while the balloon timeout was pending.
+            }
+            catch (ObjectDisposedException)
+            {
+                // The notification icon was disposed while the timeout was pending.
+            }
         }
 
         public void Dispose()
@@ -161,6 +194,9 @@ namespace Bloxstrap.UI
             _disposing = true;
 
             App.Logger.WriteLine("NotifyIconWrapper::Dispose", "Disposing NotifyIcon");
+
+            if (_activityWatcher is not null)
+                _activityWatcher.OnGameJoin -= OnGameJoin;
 
             _menuContainer.Dispatcher.Invoke(_menuContainer.Close);
             _notifyIcon.Dispose();
