@@ -102,48 +102,47 @@ namespace Bloxstrap.Models.Entities
             const string LOG_IDENT = "ActivityData::QueryServerLocation";
 
             if (!MachineAddressValid)
-                throw new InvalidOperationException($"Machine address is invalid ({MachineAddress})");
+            {
+                App.Logger.WriteLine(LOG_IDENT, $"Skipping invalid server address ({MachineAddress}).");
+                return null;
+            }
 
             await serverQuerySemaphore.WaitAsync();
 
-            if (GlobalCache.ServerLocation.TryGetValue(MachineAddress, out string? location))
-            {
-                serverQuerySemaphore.Release();
-                return location;
-            }
-
             try
             {
-                var ipInfo = await Http.GetJson<IPInfoResponse>($"https://ipinfo.io/{MachineAddress}/json");
+                if (GlobalCache.ServerLocation.TryGetValue(MachineAddress, out string? cachedLocation))
+                    return cachedLocation;
 
-                if (string.IsNullOrEmpty(ipInfo.City))
-                    throw new InvalidHTTPResponseException("Reported city was blank");
+                try
+                {
+                    var ipInfo = await Http.GetJson<IPInfoResponse>($"https://ipinfo.io/{MachineAddress}/json");
 
-                if (ipInfo.City == ipInfo.Region)
-                    location = $"{ipInfo.Region}, {ipInfo.Country}";
-                else
-                    location = $"{ipInfo.City}, {ipInfo.Region}, {ipInfo.Country}";
+                    if (String.IsNullOrEmpty(ipInfo.City))
+                        throw new InvalidHTTPResponseException("Reported city was blank");
 
-                GlobalCache.ServerLocation[MachineAddress] = location;
-                serverQuerySemaphore.Release();
+                    string? location = ipInfo.City == ipInfo.Region
+                        ? $"{ipInfo.Region}, {ipInfo.Country}"
+                        : $"{ipInfo.City}, {ipInfo.Region}, {ipInfo.Country}";
+
+                    GlobalCache.ServerLocation[MachineAddress] = location;
+                    return location;
+                }
+                catch (Exception ex)
+                {
+                    App.Logger.WriteLine(LOG_IDENT, $"Failed to get server location for {MachineAddress}");
+                    App.Logger.WriteException(LOG_IDENT, ex);
+
+                    // Cache the failure for this address to avoid repeated requests and
+                    // rate-limit loops when ipinfo.io is unavailable.
+                    GlobalCache.ServerLocation[MachineAddress] = null;
+                    return null;
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                App.Logger.WriteLine(LOG_IDENT, $"Failed to get server location for {MachineAddress}");
-                App.Logger.WriteException(LOG_IDENT, ex);
-
-                GlobalCache.ServerLocation[MachineAddress] = location;
                 serverQuerySemaphore.Release();
-
-                /*Frontend.ShowConnectivityDialog(
-                    string.Format(Strings.Dialog_Connectivity_UnableToConnect, "ipinfo.io"),
-                    Strings.ActivityWatcher_LocationQueryFailed,
-                    MessageBoxImage.Warning,
-                    ex
-                );*/
             }
-
-            return location;
         }
 
         public override string ToString() => $"{PlaceId}/{JobId}";
