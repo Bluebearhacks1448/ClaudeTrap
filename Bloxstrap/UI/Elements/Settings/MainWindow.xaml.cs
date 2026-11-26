@@ -57,6 +57,15 @@ namespace Bloxstrap.UI.Elements.Settings
             }
         }
 
+        private async void WpfUiWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (!App.Settings.Prop.CheckForUpdates)
+                return;
+
+            if (DataContext is MainWindowViewModel viewModel)
+                await viewModel.CheckForUpdatesAsync(manual: false);
+        }
+
         private async void ShowAlreadyRunningSnackbar()
         {
             await Task.Delay(500); // wait for everything to finish loading

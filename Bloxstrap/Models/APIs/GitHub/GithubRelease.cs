@@ -14,6 +14,12 @@
         [JsonPropertyName("created_at")]
         public string CreatedAt { get; set; } = null!;
 
+        [JsonPropertyName("draft")]
+        public bool Draft { get; set; }
+
+        [JsonPropertyName("prerelease")]
+        public bool Prerelease { get; set; }
+
         [JsonPropertyName("assets")]
         public List<GithubReleaseAsset>? Assets { get; set; }
     }

@@ -12,6 +12,12 @@ ClaudeTrap is an early-stage fork. The current codebase is inherited from Bloxst
 
 Every push to `claudetrap` runs Windows Debug and Release builds. Download test builds from the repository's Actions artifacts.
 
+## Updating ClaudeTrap
+
+ClaudeTrap checks the latest **published** GitHub Release when Settings opens (unless automatic update checking is disabled in **Settings → ClaudeTrap**). You can also select **Check for updates** in the Settings footer at any time. When a newer version is found, ClaudeTrap asks before downloading it, verifies the release's SHA-256 checksum and executable version, then restarts through the built-in updater. Settings, state, FastFlags, mods and themes remain in the installation folder.
+
+To publish an update, set the version in `Bloxstrap/Bloxstrap.csproj`, push a tag such as `v2.11.5`, then publish the draft Release created by the Release workflow. The published Release must contain both `ClaudeTrap.exe` and `ClaudeTrap.exe.sha256`; unpublished drafts are intentionally not offered to installed users.
+
 ## Inherited functionality
 
 - Roblox installation, update and launch handling

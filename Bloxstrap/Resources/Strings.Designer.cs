@@ -33,6 +33,69 @@ namespace Bloxstrap.Resources {
         }
                 
         /// <summary>
+        ///   Looks up a localized string similar to Check for updates.
+        /// </summary>
+        public static string Update_CheckForUpdates {
+            get {
+                return ResourceManager.GetString("Update.CheckForUpdates", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No published ClaudeTrap releases were found on GitHub yet..
+        /// </summary>
+        public static string Update_NoPublishedRelease {
+            get {
+                return ResourceManager.GetString("Update.NoPublishedRelease", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to ClaudeTrap is already up to date (version {0})..
+        /// </summary>
+        public static string Update_UpToDate {
+            get {
+                return ResourceManager.GetString("Update.UpToDate", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to A new ClaudeTrap version ({0}) is available..
+        /// </summary>
+        public static string Update_Available {
+            get {
+                return ResourceManager.GetString("Update.Available", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to ClaudeTrap could not check GitHub for updates..
+        /// </summary>
+        public static string Update_CheckFailed {
+            get {
+                return ResourceManager.GetString("Update.CheckFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The update could not be downloaded or verified..
+        /// </summary>
+        public static string Update_DownloadFailed {
+            get {
+                return ResourceManager.GetString("Update.DownloadFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The latest GitHub Release does not include the expected ClaudeTrap.exe and SHA-256 checksum..
+        /// </summary>
+        public static string Update_InvalidRelease {
+            get {
+                return ResourceManager.GetString("Update.InvalidRelease", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Claude desktop pet.
         /// </summary>
         public static string DesktopPet_Title {

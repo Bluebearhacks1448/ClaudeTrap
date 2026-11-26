@@ -174,6 +174,27 @@
   <data name="DesktopPet.Close" xml:space="preserve">
     <value>Close Claude pet</value>
   </data>
+  <data name="Update.CheckForUpdates" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="Update.NoPublishedRelease" xml:space="preserve">
+    <value>No published ClaudeTrap releases were found on GitHub yet.</value>
+  </data>
+  <data name="Update.UpToDate" xml:space="preserve">
+    <value>ClaudeTrap is already up to date (version {0}).</value>
+  </data>
+  <data name="Update.Available" xml:space="preserve">
+    <value>A new ClaudeTrap version ({0}) is available.&#xA;&#xA;Release notes:&#xA;{1}&#xA;&#xA;Download and install it now?</value>
+  </data>
+  <data name="Update.CheckFailed" xml:space="preserve">
+    <value>ClaudeTrap could not check GitHub for updates. Check your internet connection and try again.</value>
+  </data>
+  <data name="Update.DownloadFailed" xml:space="preserve">
+    <value>The update could not be downloaded or verified. Your current installation has not been changed. See the local log for details.</value>
+  </data>
+  <data name="Update.InvalidRelease" xml:space="preserve">
+    <value>The latest GitHub Release does not include the expected ClaudeTrap.exe and SHA-256 checksum. Please notify the maintainer.</value>
+  </data>
   <data name="Bootstrapper.AutoUpdateFailed" xml:space="preserve">
     <value>ClaudeTrap was unable to automatically update to version {0}. Please update it manually by downloading and running it from the website.</value>
   </data>

@@ -180,7 +180,12 @@ namespace Bloxstrap
         {
             const string LOG_IDENT = "LaunchHandler::LaunchSettings";
 
-            using var interlock = new InterProcessLock("Settings");
+            // The verified updater starts from the temporary folder while the old
+            // settings process is closing. Wait briefly for its settings mutex to release.
+            using var interlock = new InterProcessLock(
+                "Settings",
+                App.LaunchSettings.UpgradeFlag.Active ? TimeSpan.FromSeconds(15) : TimeSpan.Zero
+            );
 
             if (interlock.IsAcquired)
             {
