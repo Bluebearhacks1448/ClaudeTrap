@@ -68,6 +68,14 @@ namespace Bloxstrap
             )
         );
 
+        // The standalone .NET 10 updater executable is large (around 76 MB).
+        // Give release downloads a longer timeout than short metadata/API requests.
+        public static readonly HttpClient UpdateHttpClient = new(
+            new HttpClientLoggingHandler(
+                new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All }
+            )
+        );
+
         private static bool _showingExceptionDialog = false;
 
         public static void Terminate(ErrorCode exitCode = ErrorCode.ERROR_SUCCESS)
@@ -228,6 +236,9 @@ namespace Bloxstrap
 
             HttpClient.Timeout = TimeSpan.FromSeconds(30);
             HttpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
+
+            UpdateHttpClient.Timeout = TimeSpan.FromMinutes(5);
+            UpdateHttpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
 
             LaunchSettings = new LaunchSettings(e.Args);
 
