@@ -20,7 +20,10 @@
 
             string directory = useTempDir ? Path.Combine(Paths.TempLogs) : Path.Combine(Paths.Base, "Logs");
             string timestamp = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'");
-            string filename = $"{App.ProjectName}_{timestamp}.log";
+            // Multiple ClaudeTrap processes are expected (settings, watcher and desktop pet).
+            // Include the PID so a second process started in the same second does not fail
+            // logger initialization because it found the first process' log file.
+            string filename = $"{App.ProjectName}_{timestamp}_{Environment.ProcessId}.log";
             string location = Path.Combine(directory, filename);
 
             WriteLine(LOG_IDENT, $"Initializing at {location}");
