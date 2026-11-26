@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 using Bloxstrap.Integrations;
 using CommunityToolkit.Mvvm.Input;
@@ -21,20 +21,28 @@ namespace Bloxstrap.UI.ViewModels.ContextMenu
 
         public ServerInformationViewModel(Watcher watcher)
         {
-            _activityWatcher = watcher.ActivityWatcher!;
+            _activityWatcher = watcher.ActivityWatcher
+                ?? throw new InvalidOperationException("Server information requires an active activity watcher.");
 
             if (ServerLocationVisibility == Visibility.Visible)
-                QueryServerLocation();
+                _ = QueryServerLocationAsync();
         }
 
-        public async void QueryServerLocation()
+        private async Task QueryServerLocationAsync()
         {
-            string? location = await _activityWatcher.Data.QueryServerLocation();
-
-            if (String.IsNullOrEmpty(location))
+            try
+            {
+                string? location = await _activityWatcher.Data.QueryServerLocation();
+                ServerLocation = String.IsNullOrEmpty(location)
+                    ? Strings.Common_NotAvailable
+                    : location;
+            }
+            catch (Exception ex)
+            {
+                App.Logger.WriteLine("ServerInformationViewModel::QueryServerLocationAsync", "Failed to query server location.");
+                App.Logger.WriteException("ServerInformationViewModel::QueryServerLocationAsync", ex);
                 ServerLocation = Strings.Common_NotAvailable;
-            else
-                ServerLocation = location;
+            }
 
             OnPropertyChanged(nameof(ServerLocation));
         }
