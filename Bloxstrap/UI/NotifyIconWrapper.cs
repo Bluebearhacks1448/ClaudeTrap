@@ -15,6 +15,8 @@ namespace Bloxstrap.UI
         private ActivityWatcher? _activityWatcher => _watcher.ActivityWatcher;
 
         private EventHandler? _alertClickHandler;
+        private System.Threading.Timer? _alertCleanupTimer;
+        private string? _activeAlertId;
 
         public NotifyIconWrapper(Watcher watcher)
         {
@@ -152,34 +154,40 @@ namespace Bloxstrap.UI
 
             _notifyIcon.ShowBalloonTip(durationSeconds * 1000);
 
-            _ = ClearAlertClickHandlerAsync(clickHandler, logIdent, durationSeconds);
-        }
-
-        private async Task ClearAlertClickHandlerAsync(EventHandler? clickHandler, string logIdent, int durationSeconds)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(durationSeconds)).ConfigureAwait(false);
-
-            try
-            {
-                _menuContainer.Dispatcher.BeginInvoke(new Action(() =>
+            // A one-shot timer avoids an unobserved async Task for every balloon.
+            // Its callback only posts UI work; all NotifyIcon/event state stays on UI thread.
+            _activeAlertId = id;
+            _alertCleanupTimer?.Dispose();
+            _alertCleanupTimer = new System.Threading.Timer(
+                _ =>
                 {
-                    if (_disposing)
-                        return;
+                    try
+                    {
+                        _menuContainer.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            if (_disposing || _activeAlertId != id)
+                                return;
 
-                    _notifyIcon.BalloonTipClicked -= clickHandler;
+                            if (_alertClickHandler is not null)
+                                _notifyIcon.BalloonTipClicked -= _alertClickHandler;
 
-                    App.Logger.WriteLine(logIdent, "Duration over, erasing current click handler");
+                            _alertClickHandler = null;
+                            _activeAlertId = null;
+                            _alertCleanupTimer?.Dispose();
+                            _alertCleanupTimer = null;
 
-                    if (_alertClickHandler == clickHandler)
-                        _alertClickHandler = null;
-                    else
-                        App.Logger.WriteLine(logIdent, "Click handler has been overridden by another alert");
-                }));
-            }
-            catch (InvalidOperationException)
-            {
-                // The UI dispatcher or notification icon was disposed while the timeout was pending.
-            }
+                            App.Logger.WriteLine(logIdent, "Duration over, erasing current click handler");
+                        }));
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // The UI dispatcher was shut down while the balloon timer was pending.
+                    }
+                },
+                null,
+                TimeSpan.FromSeconds(durationSeconds),
+                Timeout.InfiniteTimeSpan
+            );
         }
 
         public void Dispose()
@@ -193,6 +201,11 @@ namespace Bloxstrap.UI
 
             if (_activityWatcher is not null)
                 _activityWatcher.OnGameJoin -= OnGameJoin;
+
+            _alertCleanupTimer?.Dispose();
+            _alertCleanupTimer = null;
+            _activeAlertId = null;
+            _alertClickHandler = null;
 
             _menuContainer.Dispatcher.Invoke(_menuContainer.Close);
             _notifyIcon.Dispose();
