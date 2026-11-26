@@ -22,6 +22,12 @@ Every push to `claudetrap` runs Windows Debug and Release builds. Download test 
 
 ClaudeTrap is intended for Windows PCs. It is not an exploit and does not modify Roblox game code. No launcher can guarantee how Roblox will treat every configuration or third-party modification. The current build keeps diagnostic logs locally and does not upload usage analytics or crash logs.
 
+## Claude desktop pet
+
+Open **ClaudeTrap → ClaudeTrap** in Settings, enable the desktop pet, choose **2D cartoon** or **3D toy**, adjust its speed, then select **Launch Claude**.
+
+The pet runs in its own process, so it remains on the desktop after the settings window closes. **Left-click and drag** Claude to pick it up; release while moving to throw it. It wanders along the desktop, jumps to nearby application-window edges and climbs taller windows. **Right-click** Claude to pause/resume, switch between 2D and 3D, or disable it. Its last position is remembered.
+
 ## Build from source
 
 Requirements: Windows, the .NET 10 SDK (10.0.100 or a later servicing update in the same feature band), and Git with submodule support.
