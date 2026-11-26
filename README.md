@@ -24,7 +24,9 @@ ClaudeTrap is intended for Windows PCs. It is not an exploit and does not modify
 
 ## Build from source
 
-Requirements: Windows, the .NET 6 SDK, and Git with submodule support.
+Requirements: Windows, the .NET 10 SDK (10.0.100 or a later servicing update in the same feature band), and Git with submodule support.
+
+The published Windows executable is built as a self-contained single-file app and includes the .NET 10 runtime; end users do not need to install the .NET Desktop Runtime separately.
 
 ```powershell
 git clone --recurse-submodules https://github.com/Bluebearhacks1448/ClaudeTrap.git
