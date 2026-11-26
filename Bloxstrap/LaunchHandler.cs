@@ -288,7 +288,9 @@ namespace Bloxstrap
             {
                 App.Logger.WriteLine(LOG_IDENT, "Watcher task has finished");
 
-                watcher.Dispose();
+                // Watcher owns a thread-affine named mutex created on the UI thread.
+                // Dispose it on that same dispatcher to release the mutex correctly.
+                App.Current.Dispatcher.Invoke(watcher.Dispose);
 
                 if (t.IsFaulted)
                 {
