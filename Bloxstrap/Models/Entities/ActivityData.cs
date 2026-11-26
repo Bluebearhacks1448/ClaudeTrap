@@ -112,7 +112,7 @@ namespace Bloxstrap.Models.Entities
             try
             {
                 if (GlobalCache.ServerLocation.TryGetValue(MachineAddress, out string? cachedLocation))
-                    return cachedLocation;
+                    return String.IsNullOrEmpty(cachedLocation) ? null : cachedLocation;
 
                 try
                 {
@@ -135,7 +135,7 @@ namespace Bloxstrap.Models.Entities
 
                     // Cache the failure for this address to avoid repeated requests and
                     // rate-limit loops when ipinfo.io is unavailable.
-                    GlobalCache.ServerLocation[MachineAddress] = null;
+                    GlobalCache.ServerLocation[MachineAddress] = String.Empty;
                     return null;
                 }
             }
