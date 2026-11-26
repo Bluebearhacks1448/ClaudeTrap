@@ -125,14 +125,38 @@ namespace Bloxstrap.Integrations
 
                 App.Logger.WriteLine(LOG_IDENT, $"Opened {LogLocation}");
 
+                int malformedEntries = 0;
+
                 while (!IsDisposed)
                 {
                     string? log = await streamReader.ReadLineAsync();
 
                     if (log is null)
+                    {
                         await Task.Delay(1000);
-                    else
+                        continue;
+                    }
+
+                    try
+                    {
                         ReadLogEntry(log);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Roblox changes log formats over time. One unexpected line must not
+                        // terminate the entire watcher and stop Discord/server tracking.
+                        malformedEntries++;
+
+                        if (malformedEntries <= 5)
+                        {
+                            App.Logger.WriteLine(LOG_IDENT, "Ignoring an unexpected Roblox log entry.");
+                            App.Logger.WriteException(LOG_IDENT, ex);
+                        }
+                        else if (malformedEntries == 6)
+                        {
+                            App.Logger.WriteLine(LOG_IDENT, "Further malformed Roblox log entries will be ignored without repeated stack traces.");
+                        }
+                    }
                 }
             }
             catch (Exception ex)
