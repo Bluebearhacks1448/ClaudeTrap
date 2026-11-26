@@ -1,9 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Bloxstrap.Utility
 {
     public class InterProcessLock : IDisposable
@@ -12,10 +6,15 @@ namespace Bloxstrap.Utility
 
         public bool IsAcquired { get; private set; }
 
+        private bool _disposed;
+
         public InterProcessLock(string name) : this(name, TimeSpan.Zero) { }
 
         public InterProcessLock(string name, TimeSpan timeout)
         {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("A mutex name must be provided.", nameof(name));
+
             Mutex = new Mutex(false, $"{Bloxstrap.App.ProjectName}-{name}");
 
             try
@@ -24,19 +23,37 @@ namespace Bloxstrap.Utility
             }
             catch (AbandonedMutexException)
             {
+                // The previous owner exited without releasing the mutex. Ownership is
+                // transferred to this thread, so it is safe to continue.
                 IsAcquired = true;
+            }
+            catch
+            {
+                Mutex.Dispose();
+                throw;
             }
         }
 
         public void Dispose()
         {
-            if (IsAcquired)
-            {
-                Mutex.ReleaseMutex();
-                IsAcquired = false;
-            }
+            if (_disposed)
+                return;
 
-            GC.SuppressFinalize(this);
+            try
+            {
+                if (IsAcquired)
+                {
+                    Mutex.ReleaseMutex();
+                    IsAcquired = false;
+                }
+            }
+            finally
+            {
+                // A timed-out lock still owns a native handle; always close it.
+                Mutex.Dispose();
+                _disposed = true;
+                GC.SuppressFinalize(this);
+            }
         }
     }
 }
