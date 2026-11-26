@@ -209,7 +209,11 @@ namespace Bloxstrap
             try
             {
                 if (!IsImplicitInstall
-                    && !InstallLocation.EndsWith(App.ProjectName, StringComparison.OrdinalIgnoreCase)
+                    && !String.Equals(
+                        Path.GetFileName(Path.TrimEndingDirectorySeparator(InstallLocation)),
+                        App.ProjectName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
                     && Directory.Exists(InstallLocation)
                     && Directory.EnumerateFileSystemEntries(InstallLocation).Any())
                 {
