@@ -133,8 +133,18 @@ function Test-RgbaPng([string]$Path) {
     Write-Host "Verified 8-bit RGBA PNG: $Path"
 }
 
-Test-WpfBitmapDecode (Join-Path $projectRoot "Bloxstrap\ClaudeTrap.ico")
-Test-WpfBitmapDecode (Join-Path $projectRoot "Bloxstrap\Resources\IconBloxstrap.ico")
 $logoPng = Join-Path $projectRoot "Bloxstrap\Resources\ClaudeTrap.png"
 Test-RgbaPng $logoPng
-Test-WpfBitmapDecode $logoPng
+
+# Decode every raster asset that can be loaded by WPF at runtime, not only the
+# application icon. This catches corrupted legacy ICO frames, message-box art,
+# cursor resources and bootstrapper artwork before they reach users.
+$imageExtensions = @(".ico", ".png", ".jpg", ".jpeg", ".bmp", ".gif")
+$imagePaths = @((Join-Path $projectRoot "Bloxstrap\ClaudeTrap.ico")) +
+    @(Get-ChildItem (Join-Path $projectRoot "Bloxstrap\Resources") -Recurse -File |
+        Where-Object { $imageExtensions -contains $_.Extension.ToLowerInvariant() } |
+        Select-Object -ExpandProperty FullName)
+
+foreach ($imagePath in ($imagePaths | Sort-Object -Unique)) {
+    Test-WpfBitmapDecode $imagePath
+}
