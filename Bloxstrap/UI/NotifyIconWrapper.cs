@@ -56,10 +56,23 @@ namespace Bloxstrap.UI
         #region Activity handlers
         public async void OnGameJoin(object? sender, EventArgs e)
         {
-            if (_activityWatcher is null)
+            if (_activityWatcher is null || _disposing)
                 return;
-            
-            string? serverLocation = await _activityWatcher.Data.QueryServerLocation();
+
+            string? serverLocation;
+            try
+            {
+                serverLocation = await _activityWatcher.Data.QueryServerLocation();
+            }
+            catch (Exception ex)
+            {
+                App.Logger.WriteLine("NotifyIconWrapper::OnGameJoin", "Could not resolve the server location.");
+                App.Logger.WriteException("NotifyIconWrapper::OnGameJoin", ex);
+                serverLocation = null;
+            }
+
+            if (_disposing)
+                return;
 
             if (string.IsNullOrEmpty(serverLocation))
             {
