@@ -31,7 +31,178 @@ namespace Bloxstrap.Resources {
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         internal Strings() {
         }
+                
+        /// <summary>
+        ///   Looks up a localized string similar to Claude desktop pet.
+        /// </summary>
+        public static string DesktopPet_Title {
+            get {
+                return ResourceManager.GetString("DesktopPet.Title", resourceCulture);
+            }
+        }
         
+        /// <summary>
+        ///   Looks up a localized string similar to A tiny orange Claude companion that wanders around your desktop. Drag it with the left mouse button, throw it, or right-click it for controls..
+        /// </summary>
+        public static string DesktopPet_Description {
+            get {
+                return ResourceManager.GetString("DesktopPet.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Enable desktop pet.
+        /// </summary>
+        public static string DesktopPet_Enable_Title {
+            get {
+                return ResourceManager.GetString("DesktopPet.Enable.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Turn on the companion so you can launch it from here. It runs in a separate process and does not need the settings window to stay open..
+        /// </summary>
+        public static string DesktopPet_Enable_Description {
+            get {
+                return ResourceManager.GetString("DesktopPet.Enable.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Character style.
+        /// </summary>
+        public static string DesktopPet_Style_Title {
+            get {
+                return ResourceManager.GetString("DesktopPet.Style.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Choose a flat animated 2D mascot or a small 3D toy..
+        /// </summary>
+        public static string DesktopPet_Style_Description {
+            get {
+                return ResourceManager.GetString("DesktopPet.Style.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 2D cartoon.
+        /// </summary>
+        public static string DesktopPet_Style_TwoD {
+            get {
+                return ResourceManager.GetString("DesktopPet.Style.TwoD", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 3D toy.
+        /// </summary>
+        public static string DesktopPet_Style_ThreeD {
+            get {
+                return ResourceManager.GetString("DesktopPet.Style.ThreeD", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Movement speed.
+        /// </summary>
+        public static string DesktopPet_Speed_Title {
+            get {
+                return ResourceManager.GetString("DesktopPet.Speed.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Adjust how quickly Claude runs across the screen..
+        /// </summary>
+        public static string DesktopPet_Speed_Description {
+            get {
+                return ResourceManager.GetString("DesktopPet.Speed.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Jump and climb on windows.
+        /// </summary>
+        public static string DesktopPet_Jump_Title {
+            get {
+                return ResourceManager.GetString("DesktopPet.Jump.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Let Claude jump between visible application windows and climb up their sides..
+        /// </summary>
+        public static string DesktopPet_Jump_Description {
+            get {
+                return ResourceManager.GetString("DesktopPet.Jump.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Launch Claude.
+        /// </summary>
+        public static string DesktopPet_Launch {
+            get {
+                return ResourceManager.GetString("DesktopPet.Launch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Claude could not be started. See the local log for details..
+        /// </summary>
+        public static string DesktopPet_LaunchFailed {
+            get {
+                return ResourceManager.GetString("DesktopPet.LaunchFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Pause movement.
+        /// </summary>
+        public static string DesktopPet_Pause {
+            get {
+                return ResourceManager.GetString("DesktopPet.Pause", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Resume movement.
+        /// </summary>
+        public static string DesktopPet_Resume {
+            get {
+                return ResourceManager.GetString("DesktopPet.Resume", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 2D cartoon.
+        /// </summary>
+        public static string DesktopPet_Mode2D {
+            get {
+                return ResourceManager.GetString("DesktopPet.Mode2D", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 3D toy.
+        /// </summary>
+        public static string DesktopPet_Mode3D {
+            get {
+                return ResourceManager.GetString("DesktopPet.Mode3D", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Close Claude pet.
+        /// </summary>
+        public static string DesktopPet_Close {
+            get {
+                return ResourceManager.GetString("DesktopPet.Close", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Returns the cached ResourceManager instance used by this class.
         /// </summary>
