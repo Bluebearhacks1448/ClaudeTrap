@@ -4,6 +4,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 
 using Bloxstrap.UI.Elements.Dialogs;
+using Bloxstrap.UI.Elements.DesktopPet;
 using Bloxstrap.Enums;
 
 namespace Bloxstrap
@@ -44,7 +45,12 @@ namespace Bloxstrap
 
             // this order is specific
 
-            if (App.LaunchSettings.UninstallFlag.Active)
+            if (App.LaunchSettings.DesktopPetFlag.Active)
+            {
+                App.Logger.WriteLine(LOG_IDENT, "Opening Claude desktop pet");
+                LaunchDesktopPet();
+            }
+            else if (App.LaunchSettings.UninstallFlag.Active)
             {
                 App.Logger.WriteLine(LOG_IDENT, "Opening uninstaller");
                 LaunchUninstaller();
@@ -302,6 +308,25 @@ namespace Bloxstrap
 
                 App.Terminate();
             });
+        }
+
+        public static void LaunchDesktopPet()
+        {
+            const string LOG_IDENT = "LaunchHandler::LaunchDesktopPet";
+
+            using var interlock = new InterProcessLock("DesktopPet");
+            if (!interlock.IsAcquired)
+            {
+                App.Logger.WriteLine(LOG_IDENT, "A Claude desktop pet is already running");
+                App.Terminate();
+                return;
+            }
+
+            var window = new DesktopPetWindow();
+            window.ShowDialog();
+
+            App.Logger.WriteLine(LOG_IDENT, "Desktop pet window closed");
+            App.SoftTerminate();
         }
 
         public static void LaunchBackgroundUpdater()
