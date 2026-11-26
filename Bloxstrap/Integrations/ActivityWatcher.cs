@@ -48,7 +48,7 @@ namespace Bloxstrap.Integrations
         /// </summary>
         public List<ActivityData> History = new();
 
-        public bool IsDisposed = false;
+        public volatile bool IsDisposed = false;
 
         public ActivityWatcher(string? logFile = null)
         {
@@ -56,74 +56,92 @@ namespace Bloxstrap.Integrations
                 LogLocation = logFile;
         }
 
-        public async void Start()
+        public async Task StartAsync()
         {
-            const string LOG_IDENT = "ActivityWatcher::Start";
+            const string LOG_IDENT = "ActivityWatcher::StartAsync";
 
-            // okay, here's the process:
-            //
-            // - tail the latest log file from %localappdata%\roblox\logs
-            // - check for specific lines to determine player's game activity as shown below:
-            //
-            // - get the place id, job id and machine address from '! Joining game '{{JOBID}}' place {{PLACEID}} at {{MACHINEADDRESS}}' entry
-            // - confirm place join with 'serverId: {{MACHINEADDRESS}}|{{MACHINEPORT}}' entry
-            // - check for leaves/disconnects with 'Time to disconnect replication data: {{TIME}}' entry
-            //
-            // we'll tail the log file continuously, monitoring for any log entries that we need to determine the current game activity
-            
-            FileInfo logFileInfo;
-
-            if (String.IsNullOrEmpty(LogLocation))
+            try
             {
-                string logDirectory = Path.Combine(Paths.LocalAppData, "Roblox\\logs");
+                FileInfo logFileInfo;
 
-                if (!Directory.Exists(logDirectory))
-                    return;
-
-                // we need to make sure we're fetching the absolute latest log file
-                // if roblox doesn't start quickly enough, we can wind up fetching the previous log file
-                // good rule of thumb is to find a log file that was created in the last 15 seconds or so
-
-                App.Logger.WriteLine(LOG_IDENT, "Opening Roblox log file...");
-
-                while (true)
+                if (String.IsNullOrEmpty(LogLocation))
                 {
-                    logFileInfo = new DirectoryInfo(logDirectory)
-                        .GetFiles()
-                        .Where(x => x.Name.Contains("Player", StringComparison.OrdinalIgnoreCase) && x.CreationTime <= DateTime.Now)
-                        .OrderByDescending(x => x.CreationTime)
-                        .First();
+                    string logDirectory = Path.Combine(Paths.LocalAppData, "Roblox\\logs");
 
-                    if (logFileInfo.CreationTime.AddSeconds(15) > DateTime.Now)
-                        break;
+                    if (!Directory.Exists(logDirectory))
+                    {
+                        App.Logger.WriteLine(LOG_IDENT, "Roblox log directory does not exist; activity tracking is unavailable.");
+                        return;
+                    }
 
-                    App.Logger.WriteLine(LOG_IDENT, $"Could not find recent enough log file, waiting... (newest is {logFileInfo.Name})");
-                    await Task.Delay(1000);
+                    App.Logger.WriteLine(LOG_IDENT, "Opening Roblox log file...");
+
+                    bool waitingLogged = false;
+                    FileInfo? latestLog = null;
+
+                    // Roblox may create its log after the watcher starts. An empty folder is
+                    // normal during startup and must not throw from First().
+                    while (!IsDisposed)
+                    {
+                        latestLog = new DirectoryInfo(logDirectory)
+                            .GetFiles()
+                            .Where(x => x.Name.Contains("Player", StringComparison.OrdinalIgnoreCase)
+                                && x.CreationTime <= DateTime.Now)
+                            .OrderByDescending(x => x.CreationTime)
+                            .FirstOrDefault();
+
+                        if (latestLog is not null && latestLog.CreationTime.AddSeconds(15) > DateTime.Now)
+                            break;
+
+                        if (!waitingLogged)
+                        {
+                            App.Logger.WriteLine(
+                                LOG_IDENT,
+                                latestLog is null
+                                    ? "Waiting for the first Roblox player log file..."
+                                    : $"Waiting for a recent player log file (newest is {latestLog.Name})."
+                            );
+                            waitingLogged = true;
+                        }
+
+                        await Task.Delay(1000);
+                    }
+
+                    if (IsDisposed || latestLog is null)
+                        return;
+
+                    logFileInfo = latestLog;
+                    LogLocation = logFileInfo.FullName;
+                }
+                else
+                {
+                    logFileInfo = new FileInfo(LogLocation);
                 }
 
-                LogLocation = logFileInfo.FullName;
+                OnLogOpen?.Invoke(this, EventArgs.Empty);
+
+                using var logFileStream = logFileInfo.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var streamReader = new StreamReader(logFileStream);
+
+                App.Logger.WriteLine(LOG_IDENT, $"Opened {LogLocation}");
+
+                while (!IsDisposed)
+                {
+                    string? log = await streamReader.ReadLineAsync();
+
+                    if (log is null)
+                        await Task.Delay(1000);
+                    else
+                        ReadLogEntry(log);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                logFileInfo = new FileInfo(LogLocation);
-            }
-
-            OnLogOpen?.Invoke(this, EventArgs.Empty);
-            
-            var logFileStream = logFileInfo.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-
-            App.Logger.WriteLine(LOG_IDENT, $"Opened {LogLocation}");
-
-            using var streamReader = new StreamReader(logFileStream);
-
-            while (!IsDisposed)
-            {
-                string? log = await streamReader.ReadLineAsync();
-
-                if (log is null)
-                    await Task.Delay(1000);
-                else
-                    ReadLogEntry(log);
+                if (!IsDisposed)
+                {
+                    App.Logger.WriteLine(LOG_IDENT, "Failed while monitoring the Roblox log file.");
+                    App.Logger.WriteException(LOG_IDENT, ex);
+                }
             }
         }
 
