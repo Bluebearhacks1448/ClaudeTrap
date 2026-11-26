@@ -16,6 +16,8 @@ namespace Bloxstrap
 
         public LaunchFlag WatcherFlag               { get; } = new("watcher");
 
+        public LaunchFlag DesktopPetFlag            { get; } = new("desktoppet,pet");
+
         public LaunchFlag BackgroundUpdaterFlag     { get; } = new("backgroundupdater");
 
         public LaunchFlag QuietFlag                 { get; } = new("quiet");
@@ -43,7 +45,7 @@ namespace Bloxstrap
 #if DEBUG
         public bool BypassUpdateCheck => true;
 #else
-        public bool BypassUpdateCheck => UninstallFlag.Active || WatcherFlag.Active;
+        public bool BypassUpdateCheck => UninstallFlag.Active || WatcherFlag.Active || DesktopPetFlag.Active;
 #endif
 
         public LaunchMode RobloxLaunchMode { get; set; } = LaunchMode.None;
