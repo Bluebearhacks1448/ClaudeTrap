@@ -34,6 +34,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
         private PetMotionState _motion = PetMotionState.Walking;
         private bool _paused;
+        private PetMotionState _motionBeforePause = PetMotionState.Walking;
         private bool _dragging;
         private bool _use3D;
         private Point _dragOffset;
@@ -351,12 +352,26 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             var pauseItem = new MenuItem { Header = Strings.DesktopPet_Pause, Name = "PauseMovementItem" };
             pauseItem.Click += (_, _) =>
             {
-                _paused = !_paused;
-                pauseItem.Header = _paused ? Strings.DesktopPet_Resume : Strings.DesktopPet_Pause;
                 if (_paused)
-                    _motion = PetMotionState.Paused;
+                {
+                    _paused = false;
+                    _motion = _motionBeforePause;
+
+                    if (_motion == PetMotionState.Walking)
+                    {
+                        _currentPlatform = FindCurrentPlatform();
+                        if (_currentPlatform is null)
+                            _motion = PetMotionState.Falling;
+                    }
+                }
                 else
-                    _motion = FindCurrentPlatform() is null ? PetMotionState.Falling : PetMotionState.Walking;
+                {
+                    _paused = true;
+                    _motionBeforePause = _motion;
+                    _motion = PetMotionState.Paused;
+                }
+
+                pauseItem.Header = _paused ? Strings.DesktopPet_Resume : Strings.DesktopPet_Pause;
             };
 
             var mode2D = new MenuItem { Header = Strings.DesktopPet_Mode2D, Name = "Mode2DItem", IsCheckable = true };
@@ -804,6 +819,8 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             if (e.ChangedButton != MouseButton.Left)
                 return;
 
+            // Direct manipulation resumes a paused pet before taking control.
+            _paused = false;
             _dragging = true;
             _motion = PetMotionState.Dragging;
             _velocityX = 0;
