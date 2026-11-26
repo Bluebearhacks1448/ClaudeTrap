@@ -178,11 +178,7 @@ namespace Bloxstrap.UI
             }
             catch (InvalidOperationException)
             {
-                // The UI dispatcher was shut down while the balloon timeout was pending.
-            }
-            catch (ObjectDisposedException)
-            {
-                // The notification icon was disposed while the timeout was pending.
+                // The UI dispatcher or notification icon was disposed while the timeout was pending.
             }
         }
 
