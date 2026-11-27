@@ -62,11 +62,11 @@ namespace Bloxstrap.Utility
                     App.Logger.WriteLine(LOG_IDENT, "Ignoring thumbnail response with an invalid requestId.");
                     continue;
                 }
-                if (item.State == "Pending")
+                if (String.Equals(item.State, "Pending", StringComparison.OrdinalIgnoreCase))
                     App.Logger.WriteLine(LOG_IDENT, $"{item.TargetId} is still pending");
-                else if (item.State == "Error")
+                else if (String.Equals(item.State, "Error", StringComparison.OrdinalIgnoreCase))
                     App.Logger.WriteLine(LOG_IDENT, $"{item.TargetId} got error code {item.ErrorCode} ({item.ErrorMessage})");
-                else if (item.State != "Completed")
+                else if (!String.Equals(item.State, "Completed", StringComparison.OrdinalIgnoreCase))
                     App.Logger.WriteLine(LOG_IDENT, $"{item.TargetId} got \"{item.State}\"");
 
                 urls[requestIndex] = item.ImageUrl;
@@ -80,6 +80,9 @@ namespace Bloxstrap.Utility
             const string LOG_IDENT = "Thumbnails::GetThumbnailUrlAsync";
             const int RETRIES = 5;
             const int RETRY_TIME_INCREMENT = 500; // ms
+
+            if (request is null)
+                throw new ArgumentNullException(nameof(request));
 
             request.RequestId = "0";
 
@@ -98,7 +101,7 @@ namespace Bloxstrap.Utility
 
                 response = json.Data[0];
 
-                if (response.State != "Pending")
+                if (!String.Equals(response.State, "Pending", StringComparison.OrdinalIgnoreCase))
                     break;
 
                 if (i == RETRIES)
@@ -107,11 +110,11 @@ namespace Bloxstrap.Utility
                     await Task.Delay(RETRY_TIME_INCREMENT * i, token);
             }
 
-            if (response.State == "Pending")
+            if (String.Equals(response.State, "Pending", StringComparison.OrdinalIgnoreCase))
                 App.Logger.WriteLine(LOG_IDENT, $"{response.TargetId} is still pending");
-            else if (response.State == "Error")
+            else if (String.Equals(response.State, "Error", StringComparison.OrdinalIgnoreCase))
                 App.Logger.WriteLine(LOG_IDENT, $"{response.TargetId} got error code {response.ErrorCode} ({response.ErrorMessage})");
-            else if (response.State != "Completed")
+            else if (!String.Equals(response.State, "Completed", StringComparison.OrdinalIgnoreCase))
                 App.Logger.WriteLine(LOG_IDENT, $"{response.TargetId} got \"{response.State}\"");
 
             return response.ImageUrl;
