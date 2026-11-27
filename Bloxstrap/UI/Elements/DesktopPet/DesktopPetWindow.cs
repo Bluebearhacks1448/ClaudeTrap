@@ -117,106 +117,61 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
         private static Canvas Create2DSprite()
         {
-            const double center = PetSize / 2;
+            // Pixel-art mascot recreated from the user's reference image.
+            // The source image's black background is intentionally transparent.
+            const double scale = 0.23;
+            const double offsetX = 6;
+            const double offsetY = 15;
+            Color orange = Color.FromRgb(241, 90, 69);
+            Brush orangeBrush = new SolidColorBrush(orange);
+            Brush eyeBrush = Brushes.Black;
+
             var canvas = new Canvas
             {
                 Width = PetSize,
                 Height = PetSize,
                 Background = Brushes.Transparent,
                 ClipToBounds = false,
+                SnapsToDevicePixels = true,
+                UseLayoutRounding = true,
                 Effect = new DropShadowEffect
                 {
-                    Color = Color.FromRgb(70, 36, 22),
-                    Opacity = 0.24,
-                    BlurRadius = 8,
-                    ShadowDepth = 3,
+                    Color = Color.FromRgb(35, 15, 12),
+                    Opacity = 0.20,
+                    BlurRadius = 5,
+                    ShadowDepth = 2,
                     RenderingBias = RenderingBias.Performance
                 }
             };
 
-            Color orange = Color.FromRgb(239, 111, 57);
-            Color darkOrange = Color.FromRgb(194, 76, 43);
-            Brush orangeBrush = new SolidColorBrush(orange);
-            Brush darkBrush = new SolidColorBrush(Color.FromRgb(67, 43, 42));
-            Brush creamBrush = new SolidColorBrush(Color.FromRgb(255, 235, 215));
-            Brush blushBrush = new SolidColorBrush(Color.FromRgb(255, 174, 145));
-
-            // Eight rounded rays make a soft, friendly sun-shaped Claude creature.
-            for (int i = 0; i < 8; i++)
+            void AddPixelRect(double x, double y, double width, double height, Brush brush)
             {
-                double angle = i * Math.PI / 4 - Math.PI / 2;
-                double radius = 33;
-                double x = center + Math.Cos(angle) * radius;
-                double y = center + Math.Sin(angle) * radius;
-
-                var ray = new Ellipse
+                var rect = new Rectangle
                 {
-                    Width = 20,
-                    Height = 29,
-                    Fill = orangeBrush,
-                    Stroke = new SolidColorBrush(darkOrange),
-                    StrokeThickness = 1.2,
-                    RenderTransformOrigin = new Point(0.5, 0.5),
-                    RenderTransform = new RotateTransform(angle * 180 / Math.PI + 90)
+                    Width = width * scale,
+                    Height = height * scale,
+                    Fill = brush,
+                    SnapsToDevicePixels = true,
+                    UseLayoutRounding = true
                 };
-                Canvas.SetLeft(ray, x - ray.Width / 2);
-                Canvas.SetTop(ray, y - ray.Height / 2);
-                canvas.Children.Add(ray);
+                Canvas.SetLeft(rect, offsetX + x * scale);
+                Canvas.SetTop(rect, offsetY + y * scale);
+                canvas.Children.Add(rect);
             }
 
-            var body = new Ellipse
-            {
-                Width = 61,
-                Height = 61,
-                Fill = orangeBrush,
-                Stroke = new SolidColorBrush(darkOrange),
-                StrokeThickness = 1.8
-            };
-            Canvas.SetLeft(body, center - body.Width / 2);
-            Canvas.SetTop(body, center - body.Height / 2 + 1);
-            canvas.Children.Add(body);
+            // Silhouette: top block, wide side arms, torso, and four square legs.
+            AddPixelRect(72, 91, 259, 252, orangeBrush);
+            AddPixelRect(12, 152, 377, 63, orangeBrush);
+            AddPixelRect(72, 276, 36, 67, orangeBrush);
+            AddPixelRect(138, 276, 32, 67, orangeBrush);
+            AddPixelRect(231, 276, 32, 67, orangeBrush);
+            AddPixelRect(296, 276, 35, 67, orangeBrush);
 
-            var face = new Ellipse
-            {
-                Width = 43,
-                Height = 34,
-                Fill = creamBrush
-            };
-            Canvas.SetLeft(face, center - face.Width / 2);
-            Canvas.SetTop(face, center - 11);
-            canvas.Children.Add(face);
-
-            AddEllipse(canvas, 42, 46, 6.5, 9, darkBrush);
-            AddEllipse(canvas, 58, 46, 6.5, 9, darkBrush);
-            AddEllipse(canvas, 43.2, 47.3, 2, 2.5, Brushes.White);
-            AddEllipse(canvas, 59.2, 47.3, 2, 2.5, Brushes.White);
-            AddEllipse(canvas, 34, 59, 7, 4, blushBrush);
-            AddEllipse(canvas, 65, 59, 7, 4, blushBrush);
-
-            var smile = new System.Windows.Shapes.Path
-            {
-                Data = Geometry.Parse("M 48,62 Q 52,68 57,62"),
-                Stroke = darkBrush,
-                StrokeThickness = 2.2,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-                Fill = Brushes.Transparent
-            };
-            canvas.Children.Add(smile);
-
-            // Tiny feet peek out underneath the round body.
-            AddEllipse(canvas, 38, 78, 13, 8, orangeBrush);
-            AddEllipse(canvas, 55, 78, 13, 8, orangeBrush);
+            // Square, black eyes exactly match the reference character.
+            AddPixelRect(108, 119, 32, 33, eyeBrush);
+            AddPixelRect(260, 119, 34, 33, eyeBrush);
 
             return canvas;
-        }
-
-        private static void AddEllipse(Canvas canvas, double left, double top, double width, double height, Brush fill)
-        {
-            var ellipse = new Ellipse { Width = width, Height = height, Fill = fill };
-            Canvas.SetLeft(ellipse, left);
-            Canvas.SetTop(ellipse, top);
-            canvas.Children.Add(ellipse);
         }
 
         private static Viewport3D Create3DSprite(out AxisAngleRotation3D rotation)
@@ -229,61 +184,52 @@ namespace Bloxstrap.UI.Elements.DesktopPet
                 IsHitTestVisible = true,
                 Camera = new PerspectiveCamera
                 {
-                    Position = new Point3D(0, 0.05, 3.0),
-                    LookDirection = new Vector3D(0, -0.02, -3.0),
+                    Position = new Point3D(0, 0, 3.35),
+                    LookDirection = new Vector3D(0, 0, -3.35),
                     UpDirection = new Vector3D(0, 1, 0),
-                    FieldOfView = 40
+                    FieldOfView = 38
                 }
             };
 
             var model = new Model3DGroup();
-            model.Children.Add(new AmbientLight(Color.FromRgb(160, 150, 145)));
-            model.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-0.4, -0.7, -1)));
-            model.Children.Add(new DirectionalLight(Color.FromRgb(255, 190, 145), new Vector3D(0.8, 0.25, 0.5)));
+            model.Children.Add(new AmbientLight(Color.FromRgb(185, 185, 185)));
+            model.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-0.35, -0.55, -1)));
+            model.Children.Add(new DirectionalLight(Color.FromRgb(255, 185, 155), new Vector3D(0.7, 0.25, 0.5)));
 
-            Material orange = CreateMaterial(Color.FromRgb(239, 111, 57));
-            Material darkOrange = CreateMaterial(Color.FromRgb(190, 72, 42));
-            Material cream = CreateMaterial(Color.FromRgb(255, 232, 209));
-            Material dark = CreateMaterial(Color.FromRgb(53, 39, 39));
-            Material white = CreateMaterial(Colors.White);
+            Material orange = CreateMaterial(Color.FromRgb(241, 90, 69));
+            Material dark = CreateMaterial(Colors.Black);
 
-            // Main rounded body and its eight low-poly sun rays.
-            model.Children.Add(CreateEllipsoid(new Point3D(0, -0.03, 0), 0.57, 0.58, 0.42, orange));
-            for (int i = 0; i < 8; i++)
+            // Build the same stepped silhouette as a shallow, solid voxel sculpture.
+            // Coordinates are derived from the 400x400 reference artwork.
+            void AddPixelBox(double x, double y, double width, double height, Material material, double depth = 0.24)
             {
-                double angle = i * Math.PI / 4;
-                double x = Math.Cos(angle) * 0.56;
-                double y = Math.Sin(angle) * 0.56;
-                model.Children.Add(CreateEllipsoid(
-                    new Point3D(x, y - 0.03, -0.02),
-                    0.17,
-                    0.22,
-                    0.16,
-                    darkOrange
-                ));
-                model.Children.Add(CreateEllipsoid(
-                    new Point3D(x * 0.91, y * 0.91 - 0.03, 0.015),
-                    0.145,
-                    0.19,
-                    0.15,
-                    orange
+                double left = (x - 200) / 200.0 * 1.05;
+                double right = (x + width - 200) / 200.0 * 1.05;
+                double top = (200 - y) / 200.0 * 1.05;
+                double bottom = (200 - y - height) / 200.0 * 1.05;
+                model.Children.Add(CreateBox(
+                    new Point3D((left + right) / 2, (top + bottom) / 2, 0),
+                    right - left,
+                    top - bottom,
+                    depth,
+                    material
                 ));
             }
 
-            model.Children.Add(CreateEllipsoid(new Point3D(0, -0.15, 0.39), 0.38, 0.29, 0.13, cream));
-            model.Children.Add(CreateEllipsoid(new Point3D(-0.16, 0.09, 0.47), 0.055, 0.075, 0.05, dark));
-            model.Children.Add(CreateEllipsoid(new Point3D(0.16, 0.09, 0.47), 0.055, 0.075, 0.05, dark));
-            model.Children.Add(CreateEllipsoid(new Point3D(-0.18, 0.12, 0.515), 0.018, 0.022, 0.014, white));
-            model.Children.Add(CreateEllipsoid(new Point3D(0.14, 0.12, 0.515), 0.018, 0.022, 0.014, white));
-            model.Children.Add(CreateEllipsoid(new Point3D(-0.48, -0.24, 0.08), 0.18, 0.14, 0.15, orange));
-            model.Children.Add(CreateEllipsoid(new Point3D(0.48, -0.24, 0.08), 0.18, 0.14, 0.15, orange));
-            model.Children.Add(CreateEllipsoid(new Point3D(-0.22, -0.54, 0.06), 0.18, 0.12, 0.16, darkOrange));
-            model.Children.Add(CreateEllipsoid(new Point3D(0.22, -0.54, 0.06), 0.18, 0.12, 0.16, darkOrange));
+            AddPixelBox(72, 91, 259, 185, orange);
+            AddPixelBox(12, 152, 377, 63, orange);
+            AddPixelBox(72, 276, 36, 67, orange);
+            AddPixelBox(138, 276, 32, 67, orange);
+            AddPixelBox(231, 276, 32, 67, orange);
+            AddPixelBox(296, 276, 35, 67, orange);
+
+            // Recessed black square eyes, raised slightly on the front face.
+            AddPixelBox(108, 119, 32, 33, dark, 0.08);
+            AddPixelBox(260, 119, 34, 33, dark, 0.08);
 
             rotation = new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0);
             model.Transform = new RotateTransform3D(rotation);
             viewport.Children.Add(new ModelVisual3D { Content = model });
-
             return viewport;
         }
 
@@ -292,65 +238,41 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             return new DiffuseMaterial(new SolidColorBrush(color));
         }
 
-        private static GeometryModel3D CreateEllipsoid(Point3D center, double radiusX, double radiusY, double radiusZ, Material material)
+        private static GeometryModel3D CreateBox(Point3D center, double width, double height, double depth, Material material)
         {
-            const int slices = 18;
-            const int stacks = 12;
+            double x0 = center.X - width / 2;
+            double x1 = center.X + width / 2;
+            double y0 = center.Y - height / 2;
+            double y1 = center.Y + height / 2;
+            double z0 = center.Z - depth / 2;
+            double z1 = center.Z + depth / 2;
+
             var mesh = new MeshGeometry3D();
             var positions = new Point3DCollection();
             var normals = new Vector3DCollection();
             var indices = new Int32Collection();
 
-            for (int stack = 0; stack <= stacks; stack++)
+            void Face(Point3D a, Point3D b, Point3D c, Point3D d, Vector3D normal)
             {
-                double phi = Math.PI * stack / stacks;
-                double sinPhi = Math.Sin(phi);
-                double cosPhi = Math.Cos(phi);
-
-                for (int slice = 0; slice <= slices; slice++)
-                {
-                    double theta = 2 * Math.PI * slice / slices;
-                    double nx = sinPhi * Math.Cos(theta);
-                    double ny = cosPhi;
-                    double nz = sinPhi * Math.Sin(theta);
-
-                    positions.Add(new Point3D(
-                        center.X + nx * radiusX,
-                        center.Y + ny * radiusY,
-                        center.Z + nz * radiusZ
-                    ));
-                    var normal = new Vector3D(nx / radiusX, ny / radiusY, nz / radiusZ);
-                    normal.Normalize();
+                int first = positions.Count;
+                positions.Add(a); positions.Add(b); positions.Add(c); positions.Add(d);
+                for (int i = 0; i < 4; i++)
                     normals.Add(normal);
-                }
+                indices.Add(first); indices.Add(first + 1); indices.Add(first + 2);
+                indices.Add(first); indices.Add(first + 2); indices.Add(first + 3);
             }
 
-            for (int stack = 0; stack < stacks; stack++)
-            {
-                for (int slice = 0; slice < slices; slice++)
-                {
-                    int first = stack * (slices + 1) + slice;
-                    int second = first + slices + 1;
-
-                    indices.Add(first);
-                    indices.Add(second);
-                    indices.Add(first + 1);
-                    indices.Add(second);
-                    indices.Add(second + 1);
-                    indices.Add(first + 1);
-                }
-            }
+            Face(new Point3D(x0, y0, z1), new Point3D(x1, y0, z1), new Point3D(x1, y1, z1), new Point3D(x0, y1, z1), new Vector3D(0, 0, 1));
+            Face(new Point3D(x1, y0, z0), new Point3D(x0, y0, z0), new Point3D(x0, y1, z0), new Point3D(x1, y1, z0), new Vector3D(0, 0, -1));
+            Face(new Point3D(x0, y1, z1), new Point3D(x1, y1, z1), new Point3D(x1, y1, z0), new Point3D(x0, y1, z0), new Vector3D(0, 1, 0));
+            Face(new Point3D(x0, y0, z0), new Point3D(x1, y0, z0), new Point3D(x1, y0, z1), new Point3D(x0, y0, z1), new Vector3D(0, -1, 0));
+            Face(new Point3D(x1, y0, z1), new Point3D(x1, y0, z0), new Point3D(x1, y1, z0), new Point3D(x1, y1, z1), new Vector3D(1, 0, 0));
+            Face(new Point3D(x0, y0, z0), new Point3D(x0, y0, z1), new Point3D(x0, y1, z1), new Point3D(x0, y1, z0), new Vector3D(-1, 0, 0));
 
             mesh.Positions = positions;
             mesh.Normals = normals;
             mesh.TriangleIndices = indices;
-
-            return new GeometryModel3D
-            {
-                Geometry = mesh,
-                Material = material,
-                BackMaterial = material
-            };
+            return new GeometryModel3D { Geometry = mesh, Material = material, BackMaterial = material };
         }
 
         private System.Windows.Controls.ContextMenu CreatePetContextMenu()
