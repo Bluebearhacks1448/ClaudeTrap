@@ -30,7 +30,7 @@ namespace Bloxstrap.Utility
             for (int i = 0; i < requests.Count; i++)
                 requests[i].RequestId = i.ToString();
 
-            var payload = new StringContent(JsonSerializer.Serialize(requests), Encoding.UTF8, "application/json");
+            using var payload = new StringContent(JsonSerializer.Serialize(requests), Encoding.UTF8, "application/json");
 
             ThumbnailResponse[] response = null!;
 
@@ -86,7 +86,7 @@ namespace Bloxstrap.Utility
 
             request.RequestId = "0";
 
-            var payload = new StringContent(JsonSerializer.Serialize(new ThumbnailRequest[] { request }), Encoding.UTF8, "application/json");
+            using var payload = new StringContent(JsonSerializer.Serialize(new ThumbnailRequest[] { request }), Encoding.UTF8, "application/json");
 
             ThumbnailResponse response = null!;
 
