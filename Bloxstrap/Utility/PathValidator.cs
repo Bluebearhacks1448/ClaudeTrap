@@ -64,7 +64,9 @@ namespace Bloxstrap.Utility
 
         public static ValidationResult IsFileNameValid(string fileName)
         {
-            if (fileName.IndexOfAny(_invalidPathChars) != -1)
+            if (String.IsNullOrWhiteSpace(fileName)
+                || fileName.IndexOfAny(_invalidPathChars) != -1
+                || fileName.EndsWith(' ') || fileName.EndsWith('.'))
                 return ValidationResult.IllegalCharacter;
 
             string fileNameNoExt = Path.GetFileNameWithoutExtension(fileName).ToUpperInvariant();
@@ -76,6 +78,9 @@ namespace Bloxstrap.Utility
 
         public static ValidationResult IsPathValid(string path)
         {
+            if (String.IsNullOrWhiteSpace(path))
+                return ValidationResult.IllegalCharacter;
+
             string? pathRoot = Path.GetPathRoot(path);
             string pathNoRoot = pathRoot != null ? path[pathRoot.Length..] : path;
 
@@ -83,7 +88,10 @@ namespace Bloxstrap.Utility
 
             foreach (var part in pathParts)
             {
-                if (part.IndexOfAny(_invalidPathChars) != -1)
+                // Windows silently normalizes trailing spaces and dots, which can
+                // make validation and the eventual filesystem target disagree.
+                if (part.IndexOfAny(_invalidPathChars) != -1
+                    || part.EndsWith(' ') || part.EndsWith('.'))
                     return ValidationResult.IllegalCharacter;
 
                 if (_reservedNames.Contains(part.ToUpperInvariant()))
@@ -91,7 +99,8 @@ namespace Bloxstrap.Utility
             }
 
             string fileName = Path.GetFileName(path);
-            if (fileName.IndexOfAny(_invalidPathChars) != -1)
+            if (fileName.IndexOfAny(_invalidPathChars) != -1
+                || fileName.EndsWith(' ') || fileName.EndsWith('.'))
                 return ValidationResult.IllegalCharacter;
 
             string fileNameNoExt = Path.GetFileNameWithoutExtension(path).ToUpperInvariant();
