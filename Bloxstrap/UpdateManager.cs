@@ -205,6 +205,13 @@ namespace Bloxstrap
 
                 response.EnsureSuccessStatusCode();
 
+                Uri? finalUri = response.RequestMessage?.RequestUri;
+                if (finalUri is null || finalUri.Scheme != Uri.UriSchemeHttps
+                    || !(String.Equals(finalUri.Host, "github.com", StringComparison.OrdinalIgnoreCase)
+                        || String.Equals(finalUri.Host, "release-assets.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
+                        || String.Equals(finalUri.Host, "objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidDataException($"The release asset '{asset.Name}' redirected to an untrusted host.");
+
                 long? contentLength = response.Content.Headers.ContentLength;
                 if (contentLength.HasValue && contentLength.Value != asset.Size)
                     throw new InvalidDataException($"The release asset '{asset.Name}' has an unexpected content length.");
