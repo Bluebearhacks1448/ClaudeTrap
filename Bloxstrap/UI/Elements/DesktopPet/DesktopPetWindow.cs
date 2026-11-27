@@ -160,7 +160,7 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             }
 
             // Silhouette: top block, wide side arms, torso, and four square legs.
-            AddPixelRect(72, 91, 259, 252, orangeBrush);
+            AddPixelRect(72, 91, 259, 185, orangeBrush);
             AddPixelRect(12, 152, 377, 63, orangeBrush);
             AddPixelRect(72, 276, 36, 67, orangeBrush);
             AddPixelRect(138, 276, 32, 67, orangeBrush);
@@ -201,14 +201,14 @@ namespace Bloxstrap.UI.Elements.DesktopPet
 
             // Build the same stepped silhouette as a shallow, solid voxel sculpture.
             // Coordinates are derived from the 400x400 reference artwork.
-            void AddPixelBox(double x, double y, double width, double height, Material material, double depth = 0.24)
+            void AddPixelBox(double x, double y, double width, double height, Material material, double depth = 0.24, double frontOffset = 0)
             {
                 double left = (x - 200) / 200.0 * 1.05;
                 double right = (x + width - 200) / 200.0 * 1.05;
                 double top = (200 - y) / 200.0 * 1.05;
                 double bottom = (200 - y - height) / 200.0 * 1.05;
                 model.Children.Add(CreateBox(
-                    new Point3D((left + right) / 2, (top + bottom) / 2, 0),
+                    new Point3D((left + right) / 2, (top + bottom) / 2, frontOffset),
                     right - left,
                     top - bottom,
                     depth,
@@ -224,8 +224,8 @@ namespace Bloxstrap.UI.Elements.DesktopPet
             AddPixelBox(296, 276, 35, 67, orange);
 
             // Recessed black square eyes, raised slightly on the front face.
-            AddPixelBox(108, 119, 32, 33, dark, 0.08);
-            AddPixelBox(260, 119, 34, 33, dark, 0.08);
+            AddPixelBox(108, 119, 32, 33, dark, 0.08, 0.17);
+            AddPixelBox(260, 119, 34, 33, dark, 0.08, 0.17);
 
             rotation = new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0);
             model.Transform = new RotateTransform3D(rotation);
