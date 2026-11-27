@@ -11,10 +11,17 @@ namespace Bloxstrap.Utility
     {
         internal static long GetFreeDiskSpace(string path)
         {
+            if (String.IsNullOrWhiteSpace(path))
+                return -1;
+
+            string? pathRoot = Path.GetPathRoot(path);
+            if (String.IsNullOrWhiteSpace(pathRoot))
+                return -1;
+
             foreach (var drive in DriveInfo.GetDrives())
             {
                 // https://github.com/bloxstraplabs/bloxstrap/issues/1648#issuecomment-2192571030
-                if (path.ToUpperInvariant().StartsWith(drive.Name))
+                if (String.Equals(pathRoot, drive.RootDirectory.FullName, StringComparison.OrdinalIgnoreCase))
                     return drive.AvailableFreeSpace;
             }
 
