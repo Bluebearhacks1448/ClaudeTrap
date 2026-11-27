@@ -289,41 +289,49 @@ namespace Bloxstrap
             const string LOG_IDENT = "Installer::DoUninstall";
 
             var processes = new List<Process>();
-            
+
             if (!String.IsNullOrEmpty(App.PlayerState.Prop.VersionGuid))
                 processes.AddRange(Process.GetProcessesByName(App.RobloxPlayerAppName));
 
             if (App.IsStudioInstalled)
                 processes.AddRange(Process.GetProcessesByName(App.RobloxStudioAppName));
 
-            // prompt to shutdown roblox if its currently running
-            if (processes.Any())
+            try
             {
-                var result = Frontend.ShowMessageBox(
-                    Strings.Bootstrapper_Uninstall_RobloxRunning,
-                    MessageBoxImage.Information,
-                    MessageBoxButton.OKCancel,
-                    MessageBoxResult.OK
-                );
-
-                if (result != MessageBoxResult.OK)
+                // prompt to shutdown roblox if its currently running
+                if (processes.Count > 0)
                 {
-                    App.Terminate(ErrorCode.ERROR_CANCELLED);
-                    return;
-                }
+                    var result = Frontend.ShowMessageBox(
+                        Strings.Bootstrapper_Uninstall_RobloxRunning,
+                        MessageBoxImage.Information,
+                        MessageBoxButton.OKCancel,
+                        MessageBoxResult.OK
+                    );
 
-                try
-                {
+                    if (result != MessageBoxResult.OK)
+                    {
+                        App.Terminate(ErrorCode.ERROR_CANCELLED);
+                        return;
+                    }
+
                     foreach (var process in processes)
                     {
-                        process.Kill();
-                        process.Close();
+                        try
+                        {
+                            process.Kill();
+                            process.WaitForExit(5000);
+                        }
+                        catch (Exception ex)
+                        {
+                            App.Logger.WriteLine(LOG_IDENT, $"Failed to close process! {ex}");
+                        }
                     }
                 }
-                catch (Exception ex)
-                {
-                    App.Logger.WriteLine(LOG_IDENT, $"Failed to close process! {ex}");
-                }
+            }
+            finally
+            {
+                foreach (var process in processes)
+                    process.Dispose();
             }
 
             string robloxFolder = Path.Combine(Paths.LocalAppData, "Roblox");
