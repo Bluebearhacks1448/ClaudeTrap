@@ -42,6 +42,16 @@ namespace Bloxstrap.Utility
             "LPT9"
         };
 
+        private static bool IsReservedDeviceName(string name)
+        {
+            string baseName = Path.GetFileNameWithoutExtension(name).ToUpperInvariant();
+            if (_reservedNames.Contains(baseName))
+                return true;
+
+            // Windows also treats COM/LPT names with superscript digits as reserved.
+            return baseName is "COM¹" or "COM²" or "COM³" or "LPT¹" or "LPT²" or "LPT³";
+        }
+
         private static readonly char[] _directorySeperatorDelimiters = new char[]
         {
             Path.DirectorySeparatorChar,
@@ -94,7 +104,7 @@ namespace Bloxstrap.Utility
                     || part.EndsWith(' ') || part.EndsWith('.'))
                     return ValidationResult.IllegalCharacter;
 
-                if (_reservedNames.Contains(part.ToUpperInvariant()))
+                if (IsReservedDeviceName(part))
                     return ValidationResult.ReservedDirectoryName;
             }
 
