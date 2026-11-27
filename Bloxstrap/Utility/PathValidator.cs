@@ -79,8 +79,7 @@ namespace Bloxstrap.Utility
                 || fileName.EndsWith(' ') || fileName.EndsWith('.'))
                 return ValidationResult.IllegalCharacter;
 
-            string fileNameNoExt = Path.GetFileNameWithoutExtension(fileName).ToUpperInvariant();
-            if (_reservedNames.Contains(fileNameNoExt))
+            if (IsReservedDeviceName(fileName))
                 return ValidationResult.ReservedFileName;
 
             return ValidationResult.Ok;
@@ -113,8 +112,7 @@ namespace Bloxstrap.Utility
                 || fileName.EndsWith(' ') || fileName.EndsWith('.'))
                 return ValidationResult.IllegalCharacter;
 
-            string fileNameNoExt = Path.GetFileNameWithoutExtension(path).ToUpperInvariant();
-            if (_reservedNames.Contains(fileNameNoExt))
+            if (IsReservedDeviceName(fileName))
                 return ValidationResult.ReservedFileName;
 
             return ValidationResult.Ok;
