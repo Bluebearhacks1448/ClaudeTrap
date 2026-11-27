@@ -9,9 +9,13 @@
         private Task? _mutexTask;
         private ManualResetEventSlim? _releaseEvent;
         private CancellationTokenSource? _cancellationTokenSource;
+        private int _acquireStarted;
 
         public AsyncMutex(bool initiallyOwned, string name)
         {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("A mutex name must be provided.", nameof(name));
+
             _initiallyOwned = initiallyOwned;
             _name = name;
         }
@@ -20,56 +24,74 @@
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            TaskCompletionSource taskCompletionSource = new();
+            if (Interlocked.Exchange(ref _acquireStarted, 1) != 0)
+                throw new InvalidOperationException("An AsyncMutex instance can only be acquired once.");
 
-            _releaseEvent = new ManualResetEventSlim();
-            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var releaseEvent = new ManualResetEventSlim();
+            var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            // Putting all mutex manipulation in its own task as it doesn't work in async contexts
-            // Note: this task should not throw.
+            _releaseEvent = releaseEvent;
+            _cancellationTokenSource = cancellationSource;
+
+            // The worker must run even if cancellation arrives before scheduling,
+            // so it can complete the TCS and dispose its synchronization resources.
             _mutexTask = Task.Factory.StartNew(
-                state =>
+                () =>
                 {
                     try
                     {
-                        CancellationToken cancellationToken = _cancellationTokenSource.Token;
                         using var mutex = new Mutex(_initiallyOwned, _name);
+                        bool ownsMutex = _initiallyOwned;
+
                         try
                         {
-                            // Wait for either the mutex to be acquired, or cancellation
-                            if (WaitHandle.WaitAny(new[] { mutex, cancellationToken.WaitHandle }) != 0)
+                            if (!ownsMutex)
                             {
-                                taskCompletionSource.SetCanceled(cancellationToken);
-                                return;
+                                try
+                                {
+                                    int waitResult = WaitHandle.WaitAny(
+                                        new[] { mutex, cancellationSource.Token.WaitHandle }
+                                    );
+
+                                    if (waitResult != 0)
+                                    {
+                                        completion.TrySetCanceled(cancellationSource.Token);
+                                        return;
+                                    }
+
+                                    ownsMutex = true;
+                                }
+                                catch (AbandonedMutexException)
+                                {
+                                    // The wait acquired the abandoned mutex for this thread.
+                                    ownsMutex = true;
+                                }
                             }
+
+                            completion.TrySetResult();
+                            releaseEvent.Wait();
                         }
-                        catch (AbandonedMutexException)
+                        finally
                         {
-                            // Abandoned by another process, we acquired it.
+                            if (ownsMutex)
+                                mutex.ReleaseMutex();
                         }
-
-                        taskCompletionSource.SetResult();
-
-                        // Wait until the release call
-                        _releaseEvent.Wait();
-
-                        mutex.ReleaseMutex();
                     }
                     catch (OperationCanceledException)
                     {
-                        taskCompletionSource.TrySetCanceled(cancellationToken);
+                        completion.TrySetCanceled(cancellationSource.Token);
                     }
                     catch (Exception ex)
                     {
-                        taskCompletionSource.TrySetException(ex);
+                        completion.TrySetException(ex);
                     }
                 },
-                state: null,
-                cancellationToken,
+                CancellationToken.None,
                 TaskCreationOptions.LongRunning,
                 TaskScheduler.Default);
 
-            return taskCompletionSource.Task;
+            return completion.Task;
         }
 
         public async Task ReleaseAsync()
@@ -77,18 +99,13 @@
             _releaseEvent?.Set();
 
             if (_mutexTask != null)
-            {
-                await _mutexTask;
-            }
+                await _mutexTask.ConfigureAwait(false);
         }
 
         public async ValueTask DisposeAsync()
         {
-            // Ensure the mutex task stops waiting for any acquire
             _cancellationTokenSource?.Cancel();
-
-            // Ensure the mutex is released
-            await ReleaseAsync();
+            await ReleaseAsync().ConfigureAwait(false);
 
             _releaseEvent?.Dispose();
             _cancellationTokenSource?.Dispose();
